@@ -1,21 +1,19 @@
-// src/App.jsx
 import React from "react";
 import { Routes, Route } from "react-router-dom";
-
-// 1. Importe o componente Home da sua nova estrutura de pastas
-import Home from "./modules/Home/Home"; 
-// Se você salvou o Home.jsx em outro lugar, ajuste o caminho acima.
+import Home from "./modules/Home/Home";
+import Chatbot from "./components/Chatbot"; // Importe o componente do chatbot
 
 export default function App() {
   return (
-    // 2. O componente <Routes> gerencia todas as rotas
-    <Routes>
-      {/* 3. A rota principal ("/") agora renderiza diretamente a sua nova página Home */}
-      <Route path="/" element={<Home />} />
-
-      {/* Por enquanto, não precisamos de outras rotas. 
-          Qualquer URL diferente de "/" resultará em uma página em branco,
-          o que é perfeito para focar no desenvolvimento da página principal. */}
-    </Routes>
+    <div className="App">
+      <Routes>
+        <Route path="/" element={<Home />} />
+        {/* Outras páginas podem ser adicionadas aqui no futuro */}
+      </Routes>
+      
+      {/* O Chatbot é renderizado aqui, fora do sistema de rotas, 
+          para que ele persista em todas as páginas da sua aplicação. */}
+      <Chatbot />
+    </div>
   );
 }
