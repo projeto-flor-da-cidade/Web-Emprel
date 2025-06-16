@@ -1,8 +1,4 @@
-// src/pages/Home.jsx
-
 import React from 'react';
-
-// --- IMPORTAÇÃO DOS ATIVOS ---
 import logoSeau from '../../assets/images/logo_seau.png';
 import logoInfo from '../../assets/images/logo_info.png';
 import cardImage1 from '../../assets/images/horta.jpg';
@@ -12,190 +8,174 @@ import videoSeau from '../../assets/videos/Video_seau.mp4';
 import adrianaImg from '../../assets/images/adrianafigueira.jpg';
 import logoWpp from '../../assets/images/logo-wpp.png';
 import logoInstagram from '../../assets/images/Logo_Instagram.png';
-import bgImage from '../../assets/images/ora-pro-nobis-flor-da-Pereskia-aculeata.jpg';
 
-// 1. DEFINIÇÃO DAS CORES DIRETAMENTE NO COMPONENTE
-const colors = {
-  primaryDark: '#1d1fa8',
-  primaryText: '#191cac',
-  secondaryYellow: '#d1c517',
-  white: '#ffffff'
-};
+const cards = [
+  {
+    img: cardImage1,
+    alt: 'Pessoa trabalhando na horta',
+    text: 'Solicite Apoio Para sua Horta!',
+    href: '#detalhe1'
+  },
+  {
+    img: cardImage2,
+    alt: 'Mãos segurando planta',
+    text: 'Conheça os cursos ofertados pela SEAU.',
+    href: '#detalhe2'
+  },
+  {
+    img: cardImage3,
+    alt: 'Aula de agroecologia',
+    text: 'Atualize-se com nossas novidades em agroecologia!',
+    href: '#detalhe3'
+  }
+];
 
-function Home() {
+export default function Home() {
   return (
-    <div
-      className="font-sans bg-cover bg-fixed bg-center" // Classes de cores removidas
-      style={{ 
-        backgroundImage: `url(${bgImage})`,
-        color: colors.primaryText // Cor do texto principal
-      }}
-    >
+    <div className="font-sans bg-[#F9FAFB] text-[#191cac]">
       {/* Header */}
-      <header 
-        className="text-white flex flex-wrap justify-between items-center p-4 md:px-8"
-        style={{ backgroundColor: colors.primaryDark }}
-      >
-        <div className="logo">
-          <img src={logoSeau} alt="Logo Flor da Cidade" className="h-16" />
-        </div>
-        <h1 className="flex-1 text-center text-2xl md:text-3xl font-bold mx-4">
-          Flor da Cidade
-        </h1>
-        <div className="header-buttons flex items-center gap-4 mt-4 md:mt-0">
-          <a 
-            href="#detalhe4" 
-            className="flex items-center gap-2 px-4 py-2 rounded-lg font-bold"
-            style={{ backgroundColor: colors.secondaryYellow, color: colors.primaryDark }}
-          >
+      <header className="flex flex-col md:flex-row items-center justify-between bg-[#1D3557] text-white p-4 md:px-8">
+        <img src={logoSeau} alt="Logo Flor da Cidade" className="h-16 mb-4 md:mb-0" />
+        <h1 className="flex-1 text-center text-2xl md:text-3xl font-bold">Flor da Cidade</h1>
+        <div className="flex items-center gap-4">
+          <a href="#detalhe4" className="flex items-center gap-2 px-4 py-2 rounded-lg font-bold bg-[#F4D35E] text-[#1D3557] hover:bg-[#e5c94f] transition">
             <img src={logoInfo} alt="Informações" className="h-5" />
           </a>
-          <button 
-            className="px-4 py-2 rounded-lg font-bold"
-            style={{ backgroundColor: colors.secondaryYellow, color: colors.primaryDark }}
-          >
+          <button className="px-4 py-2 rounded-lg font-bold text-[#1D3557] bg-[#F4D35E] hover:bg-[#e5c94f] transition">
             Acessibilidade
           </button>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="mx-auto max-w-6xl px-4 py-12 space-y-12">
-        
-        {/* Seção de Cards */}
-        <section className="flex flex-wrap justify-center gap-8">
-          <div 
-            className="w-[300px] rounded-xl p-4 text-center shadow-lg flex flex-col"
-            style={{ backgroundColor: colors.primaryDark, color: colors.white }}
-          >
-            <img src={cardImage1} alt="Pessoa trabalhando na horta" className="w-full h-40 object-cover rounded-lg mb-4" />
-            <p className="flex-grow">
-              Gosta de produzir e de trabalhar com a terra? Este é o lugar perfeito, peça aqui a implantação ou o apoio para a sua horta, abaixo, saiba quais requisitos para solicitar.
-            </p>
-            <a 
-              href="#detalhe1" 
-              className="inline-block px-4 py-2 rounded-md font-bold mt-4 self-center"
-              style={{ backgroundColor: colors.secondaryYellow, color: colors.primaryDark }}
-            >
-              Saiba mais
-            </a>
-          </div>
-          <div 
-            className="w-[300px] rounded-xl p-4 text-center shadow-lg flex flex-col"
-            style={{ backgroundColor: colors.primaryDark, color: colors.white }}
-          >
-            <img src={cardImage2} alt="Mãos segurando terra com uma planta" className="w-full h-40 object-cover rounded-lg mb-4" />
-            <p className="flex-grow">
-              Conheça os cursos ofertados pela Secretaria Executiva de Agricultura Urbana.
-            </p>
-            <a 
-              href="#detalhe2" 
-              className="inline-block px-4 py-2 rounded-md font-bold mt-4 self-center"
-              style={{ backgroundColor: colors.secondaryYellow, color: colors.primaryDark }}
-            >
-              Saiba mais
-            </a>
-          </div>
-          <div 
-            className="w-[300px] rounded-xl p-4 text-center shadow-lg flex flex-col"
-            style={{ backgroundColor: colors.primaryDark, color: colors.white }}
-          >
-            <img src={cardImage3} alt="Plantas em um canteiro" className="w-full h-40 object-cover rounded-lg mb-4" />
-            <p className="flex-grow">
-              Nossa aba informativa contém de tudo para quem ama agroecologia e quer estar sempre ligado nas novidades!
-            </p>
-            <a 
-              href="#detalhe3" 
-              className="inline-block px-4 py-2 rounded-md font-bold mt-4 self-center"
-              style={{ backgroundColor: colors.secondaryYellow, color: colors.primaryDark }}
-            >
-              Saiba mais
-            </a>
+      <main className="mx-auto max-w-6xl px-4 space-y-12">
+        {/* Cards Section */}
+        <section className="w-full bg-green-50 py-6 md:py-8 rounded-3xl shadow-inner mt-6">
+          <h2 className="text-4xl font-extrabold text-center text-[#1D3557] mb-6 md:mb-10">O que fazemos</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 px-4">
+            {cards.map((card, i) => (
+              <div key={i} className="group bg-white rounded-2xl overflow-hidden shadow-xl transform transition hover:scale-105 flex flex-col">
+                <img src={card.img} alt={card.alt} className="w-full h-48 object-cover" />
+                <div className="p-6 flex-1 flex flex-col justify-between">
+                  <p className="text-lg font-semibold text-[#1D3557] text-center mb-4">{card.text}</p>
+                  <a href={card.href} className="self-center font-bold bg-[#F4D35E] text-[#1D3557] py-2 px-6 rounded-full transition-colors duration-300 group-hover:bg-[#FFE46B]">
+                    Saiba mais
+                  </a>
+                </div>
+              </div>
+            ))}
           </div>
         </section>
 
-        {/* ... O resto do seu JSX (seções de detalhes) continua aqui sem alterações ... */}
-        {/* Seções de Detalhes */}
-        <section id="detalhe1" className="bg-white/90 p-8 rounded-xl space-y-4">
-          <h2 className="text-2xl font-bold">Solicite aqui a implantação ou o apoio para a sua horta</h2>
-          <p className="font-bold">Requisitos para solicitar a horta:</p>
-          <ol className="list-decimal list-inside space-y-2">
+        {/* Detail Sections */}
+        <section id="detalhe1" className="bg-green-50 py-6 md:py-8 rounded-3xl shadow-inner px-4 md:px-8 flex flex-col items-center">
+          <h2 className="text-2xl font-bold text-[#1D3557] mb-4">Solicite aqui a implantação ou o apoio para a sua horta</h2>
+          <p className="font-semibold mb-4">Requisitos para solicitar a horta:</p>
+          <ol className="list-decimal list-inside space-y-2 mb-6">
             <li>Ser instituição pública</li>
             <li>Ter no mínimo 3 participantes em caso de comunidade</li>
           </ol>
+          <a href="#" className="font-bold bg-[#F4D35E] text-[#1D3557] py-2 px-6 rounded-full transition-colors duration-300 hover:bg-[#FFE46B]">
+            Solicitar Acompanhamento!
+          </a>
         </section>
 
-        <section id="detalhe2" className="bg-white/90 p-8 rounded-xl space-y-4">
-          <h2 className="text-2xl font-bold">Cultiva Recife</h2>
-          <p>Nossos cursos se dividem em dois grupos:</p>
-          <ol className="list-decimal list-inside space-y-4">
+        <section id="detalhe2" className="bg-green-50 py-6 md:py-8 rounded-3xl shadow-inner px-4 md:px-8 flex flex-col items-center">
+          <h2 className="text-2xl font-bold text-[#1D3557] mb-4">Cultiva Recife</h2>
+          <p className="mb-4 text-center">Nossos cursos se dividem em dois grupos:</p>
+          <ol className="list-decimal list-inside space-y-4 mb-6">
             <li>
-              <b className="font-bold">Cursos próprios da SEAU:</b>
+              <span className="font-semibold">Cursos próprios da SEAU:</span>
               <ul className="list-disc list-inside ml-4 mt-2 space-y-2">
                 <li>Agroecologia na cidade</li>
-                <li>Como tranformar meu quintal num quintal produtivo</li>
+                <li>Como transformar meu quintal num quintal produtivo</li>
               </ul>
             </li>
             <li>
-              <b className="font-bold">Cursos institucionais:</b>
+              <span className="font-semibold">Cursos institucionais:</span>
               <ul className="list-disc list-inside ml-4 mt-2 space-y-2">
                 <li>Ervas medicinais e PANCs</li>
               </ul>
             </li>
           </ol>
+          <a href="#" className="font-bold bg-[#F4D35E] text-[#1D3557] py-2 px-6 rounded-full transition-colors duration-300 hover:bg-[#FFE46B]">
+            Acessar Cursos
+          </a>
         </section>
 
-        <section id="detalhe3" className="bg-white/90 p-8 rounded-xl space-y-4">
-          <h2 className="text-2xl font-bold">Informativos SEAU</h2>
-          <p>Dia Mundial da Abelha:</p>
-          {/* A classe 'mx-auto' foi removida daqui para alinhar à esquerda */}
-          <video controls playsInline className="w-full max-w-sm rounded-xl">
+        <section id="detalhe3" className="bg-green-50 py-6 md:py-8 rounded-3xl shadow-inner px-4 md:px-8 flex flex-col items-center">
+          <h2 className="text-2xl font-bold text-[#1D3557] mb-4">Informativos SEAU</h2>
+          <p className="mb-4">Dia Mundial da Abelha:</p>
+          <video controls playsInline className="w-full max-w-xs rounded-xl">
             <source src={videoSeau} type="video/mp4" />
             Seu navegador não suporta o vídeo.
           </video>
         </section>
-        
-        <section id="detalhe4" className="bg-white/90 p-8 rounded-xl space-y-6">
-          <h2 className="text-2xl font-bold">Adriana Figueira</h2>
-          <img src={adrianaImg} alt="Retrato de Adriana Figueira" className="w-48 h-48 object-cover rounded-full mx-auto md:mx-0" />
-          <p className='text-justify'>Graduada em Arquitetura e Urbanismo pela Universidade Federal de Pernambuco (1983), com especialização em Conservação Integrada Urbana e Territorial pela Universidade Federal de Pernambuco e mestrado em Desenvolvimento Urbano pela Universidade Federal de Pernambuco (2000). Funcionária da Empresa de Urbanização do Recife – Urb Recife, desde 1986, trabalhou com a urbanização de áreas especiais de interesse social, com a preservação de sítios históricos e com planejamento e licenciamento urbano. Atualmente, exerce a função de Secretária Executiva de Agricultura Urbana da Prefeitura do Recife, com a missão de promover a agricultura urbana e desenvolvimento sustentável para a cidade, a partir da articulação, capacitação, fomento e execução de ações agroecológicas, que promovam uma mudança de paradigmas e a melhoria da qualidade de vida das pessoas com o envolvimento da população e o aproveitamento de áreas propícias ao cultivo.</p>
-          
-          <h2 className="text-2xl font-bold border-t pt-6">Sobre a Secretaria Executiva de Agricultura Urbana - SEAU</h2>
-          <p className='text-justify'>Criada no início da gestão do Prefeito João Campos, a Secretaria Executiva de Agricultura Urbana - SEAU tem como objetivo fomentar as práticas sustentáveis de agricultura no território do município, intensificando a produção agroecológica de alimentos e ervas medicinais, a partir de hortas e pomares em áreas públicas e privadas com potencial agriculturável na cidade, contribuindo para a segurança alimentar, a sustentabilidade ambiental, o fortalecimento das relações sociais e a economia solidária.</p> 
-          <p className='text-justify'>O Recife conta com o Plano de Agroecologia Urbana desenvolvido pela Secretaria Executiva de Agricultura Urbana a partir de um processo de escuta e discussão com diversos segmentos da sociedade durante o Seminário de Agroecologia Urbana do Recife, que aconteceu em 23 de março de 2021.</p>     
-          <p className='text-justify'>Com o objetivo de nortear a política de agroecologia urbana do município, o Plano estabelece metas como: implantação e apoio a 180 estruturas de produção, como hortas, pomares, roçados e hortas fitoterápicas e escolares até 2024; desenvolvimento de parcerias com, no mínimo, 10 organizações sociais, acadêmicas e comunitárias por ano para projetos agroecológicos; implantação da coleta de orgânicos e compostagem em 20 escolas municipais; e construção da política de agroecologia urbana do Recife.</p>
-          <p className='text-justify'>Promover a agricultura urbana e o desenvolvimento sustentável para a cidade requer o envolvimento e efetivo comprometimento de gestores públicos, sociedade civil e demais parceiros, fomentando e executando ações agroecológicas, que promovam mudanças de paradigmas e melhoria da qualidade de vida das pessoas.</p>  
-          
-          <div className="space-y-4 border-t pt-6">
-            <h3 className="text-xl font-bold">Endereço</h3>
-            <p>Prefeitura do Recife - Avenida Cais do Apolo, 925, Bairro do Recife, <b>5º andar</b>, Recife/PE, CEP: 50030-903</p>       
-            
-            <h3 className="text-xl font-bold">Contato Institucional</h3>
-            <p><b>Telefone:</b> (81) 3355-8606 </p>
-            <p><b>E-mail:</b> agriculturaurbana@recife.pe.gov.br</p>        
+
+        <section id="detalhe4" className="bg-green-50 py-6 md:py-8 rounded-3xl shadow-inner px-4 md:px-8">
+          <h2 className="text-2xl font-bold text-[#1D3557] mb-4">Adriana Figueira</h2>
+          <img src={adrianaImg} alt="Retrato de Adriana Figueira" className="w-32 h-32 md:w-48 md:h-48 object-cover rounded-full mx-auto md:mx-0 mb-4" />
+          <p className="text-justify mb-4">
+            Graduada em Arquitetura e Urbanismo pela Universidade Federal de Pernambuco (1983), com especialização em Conservação Integrada Urbana e Territorial e mestrado em Desenvolvimento Urbano pela UFPE (2000).
+          </p>
+          <p className="text-justify mb-4">
+            Atua na Urb Recife desde 1986 em projetos de urbanização e preservação histórica. Hoje é Secretária Executiva de Agricultura Urbana do Recife.
+          </p>
+          <h3 className="text-xl font-bold text-[#1D3557] border-t pt-4 mt-4">Sobre a SEAU</h3>
+          <p className="text-justify mb-4">
+            Criada na gestão de João Campos, fomenta práticas sustentáveis de agricultura urbana, fortalecendo segurança alimentar e economia solidária.
+          </p>
+          <div className="border-t pt-4 mt-4 space-y-2">
+            <p><span className="font-semibold">Endereço:</span> Prefeitura do Recife - Av. Cais do Apolo, 925, 5º andar, Recife/PE, CEP: 50030-903</p>
+            <p><span className="font-semibold">Telefone:</span> (81) 3355-8606</p>
+            <p><span className="font-semibold">E-mail:</span> agriculturaurbana@recife.pe.gov.br</p>
+          </div>
+        </section>
+
+        {/* FAQ Section */}
+        <section id="faq" className="bg-green-50 py-6 md:py-8 rounded-3xl shadow-inner px-4 md:px-8">
+          <h2 className="text-3xl font-bold text-[#1D3557] text-center mb-6">Perguntas Frequentes</h2>
+          <div className="space-y-4">
+            <details className="bg-white p-4 rounded-lg shadow">
+              <summary className="font-semibold text-[#1D3557] cursor-pointer">Quem somos nós?</summary>
+              <p className="mt-2 text-justify">
+                <span className="font-bold">Adriana Figueira</span> é graduada em Arquitetura e Urbanismo pela Universidade Federal de Pernambuco (1983), com especialização em Conservação Integrada Urbana e Territorial e mestrado em Desenvolvimento Urbano (2000). Funcionária da Urb Recife desde 1986, trabalhou na urbanização de áreas de interesse social, preservação de sítios históricos e planejamento urbano. Hoje, lidera a Secretaria Executiva de Agricultura Urbana, promovendo ações agroecológicas e desenvolvimento sustentável para a cidade.
+              </p>
+            </details>
+            <details className="bg-white p-4 rounded-lg shadow">
+              <summary className="font-semibold text-[#1D3557] cursor-pointer">Como solicitar apoio para minha horta?</summary>
+              <p className="mt-2">
+                Para solicitar apoio, basta acessar a seção "O que fazemos" e clicar em "Solicitar Acompanhamento!" na área de implantação de hortas. Preencha os requisitos e aguarde nosso retorno em até 5 dias úteis.
+              </p>
+            </details>
+            <details className="bg-white p-4 rounded-lg shadow">
+              <summary className="font-semibold text-[#1D3557] cursor-pointer">Quais cursos estão disponíveis?</summary>
+              <p className="mt-2">
+                Oferecemos cursos próprios da SEAU, como "Agroecologia na cidade" e "Como transformar meu quintal num quintal produtivo", além de cursos institucionais em parceria com outras organizações, incluindo "Ervas medicinais e PANCs".
+              </p>
+            </details>
+            <details className="bg-white p-4 rounded-lg shadow">
+              <summary className="font-semibold text-[#1D3557] cursor-pointer">Como funcionam os informativos?</summary>
+              <p className="mt-2">
+                Nossos informativos trazem datas comemorativas e novidades em agroecologia. Acesse a seção "Informativos SEAU" para assistir vídeos e conferir conteúdos exclusivos sobre eventos como o Dia Mundial da Abelha.
+              </p>
+            </details>
           </div>
         </section>
       </main>
 
       {/* Footer */}
-      <footer 
-        className="text-white flex justify-between items-center p-4 md:px-8 flex-wrap"
-        style={{ backgroundColor: colors.primaryDark }}
-      >
-        <div className="footer-logo">
-          <img src={logoSeau} alt="Logo Flor da Cidade" className="h-12" />
-        </div>
-        <div className="footer-links flex gap-4">
-          <a href="https://wa.me" target="_blank" rel="noopener noreferrer">
-            <img src={logoWpp} alt="WhatsApp" className="h-8 transition-transform hover:scale-110" />
+      <footer className="flex flex-col md:flex-row justify-between items-center bg-[#1D3557] text-white p-4 md:px-8 space-y-4 md:space-y-0">
+        <img src={logoSeau} alt="Logo Flor da Cidade" className="h-12" />
+        <div className="flex gap-4">
+          <a href="https://wa.me" target="_blank" rel="noopener noreferrer" className="hover:scale-110 transform transition">
+            <img src={logoWpp} alt="WhatsApp" className="h-8" />
           </a>
-          <a href="https://instagram.com" target="_blank" rel="noopener noreferrer">
-            <img src={logoInstagram} alt="Instagram" className="h-8 transition-transform hover:scale-110" />
+          <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="hover:scale-110 transform transition">
+            <img src={logoInstagram} alt="Instagram" className="h-8" />
           </a>
         </div>
       </footer>
     </div>
   );
 }
-
-export default Home;
