@@ -1,163 +1,28 @@
+// src/modules/Home/Home.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 
-// Ícones
-import { 
-  FaChevronDown, 
-  FaSearchPlus, 
-  FaSearchMinus, 
-  FaAdjust, 
-  FaTimes, 
-  FaVolumeUp, 
-  FaMapMarkerAlt 
-} from 'react-icons/fa';
+// Componentes Reutilizáveis
+import Header from '../../components/Header';
+import Footer from '../../components/Footer';
+import CourseModal from '../../components/CourseModal';
+import MapComponent from '../../components/MapComponent';
 
-// Componentes de Terceiros
+// Dados
+import { serviceCards } from '../../constants/servicesData';
+import { seauCourses, externalCourses } from '../../constants/courseData';
+
+// Libs de Terceiros
 import Slider from 'react-slick';
-import 'slick-carousel/slick/slick.css'; 
+import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
 
-// Assets (Imagens e Vídeos)
-import logoSeau from '../../assets/images/logo_seau.png';
-import logoInfo from '../../assets/images/logo_info.png';
-import cardImage1 from '../../assets/images/horta.jpg';
-import cardImage2 from '../../assets/images/alface.jpg';
-import cardImage3 from '../../assets/images/aula.jpg';
+// Assets
 import videoSeau from '../../assets/videos/Video_seau.mp4';
 import adrianaImg from '../../assets/images/adrianafigueira.jpg';
-import logoWpp from '../../assets/images/logo-wpp.png';
-import logoInstagram from '../../assets/images/Logo_Instagram.png';
 
-// Correção do ícone padrão do Leaflet
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
-  iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
-});
+// Ícones
+import { FaChevronDown } from 'react-icons/fa';
 
-// DADOS PARA OS CARDS DE SERVIÇOS
-const serviceCards = [
-  {
-    img: cardImage1,
-    alt: 'Pessoa trabalhando na horta',
-    title: 'Apoio Para Hortas',
-    text: 'Solicite apoio técnico para iniciar ou manter sua horta comunitária.',
-    href: '#detalhe1'
-  },
-  {
-    img: cardImage2,
-    alt: 'Mãos segurando planta',
-    title: 'Cursos e Oficinas',
-    text: 'Conheça nossos cursos e oficinas sobre agroecologia e cultivo urbano.',
-    href: '#Cursos'
-  },
-  {
-    img: cardImage3,
-    alt: 'Aula de agroecologia',
-    title: 'Novidades',
-    text: 'Atualize-se com nossas novidades e práticas em agroecologia.',
-    href: '#detalhe3'
-  }
-];
-
-// DADOS DETALHADOS PARA OS CURSOS
-const courseData = [
-  { id: 1, tipo: 'Curso', nome: 'Agroecologia para Iniciantes', local: 'Parque da Jaqueira', instituicao: 'SEAU', publicoAlvo: 'Todos os públicos', inscricaoInicio: '01/08/2024', inscricaoFim: '15/08/2024', cursoInicio: '20/08/2024', cursoFim: '20/09/2024', turno: 'Manhã', maxPessoas: 30, cargaHoraria: 40, img: cardImage1, alt: 'Pessoa trabalhando na horta' },
-  { id: 2, tipo: 'Oficina', nome: 'Compostagem Doméstica', local: 'Online (Zoom)', instituicao: 'SEAU', publicoAlvo: 'Moradores de apartamento', inscricaoInicio: '10/08/2024', inscricaoFim: '25/08/2024', cursoInicio: '01/09/2024', cursoFim: '01/09/2024', turno: 'Tarde', maxPessoas: 50, cargaHoraria: 4, img: cardImage2, alt: 'Mão com terra' },
-  { id: 3, tipo: 'Curso', nome: 'Cultivo de PANCs', local: 'Horta de Casa Amarela', instituicao: 'SEAU', publicoAlvo: 'Hortelões e entusiastas', inscricaoInicio: '15/08/2024', inscricaoFim: '30/08/2024', cursoInicio: '05/09/2024', cursoFim: '26/09/2024', turno: 'Manhã', maxPessoas: 25, cargaHoraria: 32, img: cardImage3, alt: 'Aula de agroecologia' },
-  { id: 4, tipo: 'Oficina', nome: 'Jardinagem Vertical', local: 'Sede da Prefeitura', instituicao: 'Jardim Urbano Co.', publicoAlvo: 'Interessados em pequenos espaços', inscricaoInicio: '20/08/2024', inscricaoFim: '05/09/2024', cursoInicio: '10/09/2024', cursoFim: '10/09/2024', turno: 'Tarde', maxPessoas: 40, cargaHoraria: 3, img: cardImage1, alt: 'Horta comunitária' },
-  { id: 5, tipo: 'Curso', nome: 'Manejo de Pragas Orgânico', local: 'UFPE - Campus Recife', instituicao: 'Universidade Federal de Pernambuco', publicoAlvo: 'Estudantes e agricultores', inscricaoInicio: '01/09/2024', inscricaoFim: '15/09/2024', cursoInicio: '22/09/2024', cursoFim: '13/10/2024', turno: 'Integral', maxPessoas: 20, cargaHoraria: 60, img: cardImage2, alt: 'Mãos segurando planta' },
-];
-
-const seauCourses = courseData.filter(c => c.instituicao === 'SEAU');
-const externalCourses = courseData.filter(c => c.instituicao !== 'SEAU');
-
-// Componente do Modal de Cursos
-const CourseModal = ({ course, onClose }) => {
-  if (!course) return null;
-
-  return (
-    <div 
-      className="fixed inset-0 bg-black bg-opacity-60 z-[1001] flex justify-center items-center p-4"
-      onClick={onClose}
-    >
-      <div 
-        className="course-modal-content w-full max-w-2xl rounded-2xl shadow-2xl p-6 md:p-8 relative max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 transition-colors">
-          <FaTimes size={24} />
-        </button>
-        
-        <span className="inline-block bg-[#F4D35E] text-[#1D3557] font-bold text-sm px-3 py-1 rounded-full mb-4">
-          {course.tipo}
-        </span>
-        <h2 className="text-3xl font-extrabold text-[#1D3557] mb-4">{course.nome}</h2>
-        
-        <div className="space-y-4 text-gray-700">
-          <div className="flex items-center gap-3 text-lg">
-            <FaMapMarkerAlt className="text-[#F4D35E] flex-shrink-0" /> 
-            <span>{course.local}</span>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 border-t border-gray-200 pt-4 mt-4">
-            <p><strong>Instituição:</strong> {course.instituicao}</p>
-            <p><strong>Público-alvo:</strong> {course.publicoAlvo}</p>
-            <p><strong>Inscrições:</strong> {course.inscricaoInicio} a {course.inscricaoFim}</p>
-            <p><strong>Período do curso:</strong> {course.cursoInicio} a {course.cursoFim}</p>
-            <p><strong>Turno:</strong> {course.turno}</p>
-            <p><strong>Vagas:</strong> Até {course.maxPessoas} pessoas</p>
-            <p className="md:col-span-2"><strong>Carga Horária:</strong> {course.cargaHoraria} horas</p>
-          </div>
-        </div>
-
-        <button 
-          onClick={onClose} 
-          className="mt-8 w-full md:w-auto float-right rounded-lg bg-[#1D3557] text-white px-6 py-2 font-bold transition hover:bg-opacity-90"
-        >
-          Fechar
-        </button>
-      </div>
-    </div>
-  );
-};
-
-// Componente do Mapa
-const MapComponent = () => {
-  const position = [-8.05428, -34.8813];
-  return (
-    <div className="relative z-0 w-full h-[400px] rounded-2xl shadow-lg overflow-hidden mb-8">
-      <MapContainer center={position} zoom={13} scrollWheelZoom={false} style={{ height: '100%', width: '100%' }}>
-        <TileLayer attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-        <Marker position={position}><Popup>Prefeitura do Recife. <br /> Sede da SEAU.</Popup></Marker>
-      </MapContainer>
-    </div>
-  );
-};
-
-// Componente do Menu de Acessibilidade
-const AccessibilityMenu = ({ onClose, fontHandlers, darkModeHandler, ttsHandler }) => {
-  return (
-    <div className="absolute top-full right-4 mt-2 w-72 bg-white rounded-xl shadow-2xl p-4 border border-gray-200 text-[#1D3557] z-[1000]">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="font-bold text-lg">Acessibilidade</h3>
-        <button onClick={onClose} className="text-gray-500 hover:text-gray-800"><FaTimes size={20} /></button>
-      </div>
-      <ul className="space-y-2">
-        <li><button onClick={fontHandlers.increase} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 transition-colors"><FaSearchPlus /> Aumentar Fonte</button></li>
-        <li><button onClick={fontHandlers.decrease} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 transition-colors"><FaSearchMinus /> Diminuir Fonte</button></li>
-        <li><button onClick={darkModeHandler.toggle} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 transition-colors"><FaAdjust /> {darkModeHandler.isDarkMode ? 'Desativar' : 'Ativar'} Modo Noturno</button></li>
-        <li><button onClick={ttsHandler.toggle} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 transition-colors"><FaVolumeUp /> {ttsHandler.isTtsEnabled ? 'Desativar' : 'Ativar'} Leitura por Voz</button></li>
-      </ul>
-      <button onClick={onClose} className="mt-4 w-full rounded-lg bg-[#F4D35E] px-4 py-2 font-bold text-[#1D3557] transition hover:bg-[#e5c94f]">Fechar</button>
-    </div>
-  );
-};
-
-// Componente Principal da Página
 export default function Home() {
   const [isAccessibilityMenuOpen, setAccessibilityMenuOpen] = useState(false);
   const [baseFontSize, setBaseFontSize] = useState(16);
@@ -178,10 +43,8 @@ export default function Home() {
   // Lógica para Leitura por Voz (TTS)
   const handleTtsMouseOver = useCallback((event) => {
     if (!isTtsEnabled) return;
-
     const target = event.target;
     const readableTags = ['P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'A', 'LI', 'BUTTON', 'SUMMARY'];
-
     if (readableTags.includes(target.tagName) && target.innerText) {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(target.innerText);
@@ -220,17 +83,11 @@ export default function Home() {
 
   return (
     <div className="font-sans bg-[#F9FAFB] text-[#1D3557]">
-      <header className="bg-[#1D3557] text-white shadow-md sticky top-0 z-[999]">
-        <div className="relative mx-auto flex h-20 max-w-7xl items-center justify-between p-4 md:px-8">
-          <div className="flex-shrink-0"><img src={logoSeau} alt="Logo Flor da Cidade" className="h-16" /></div>
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center"><h1 className="text-2xl md:text-3xl font-bold">Flor da Cidade</h1></div>
-          <div className="flex items-center gap-4">
-            <a href="#detalhe4" className="flex items-center gap-2 rounded-lg bg-[#F4D35E] px-4 py-2 font-bold text-[#1D3557] transition hover:bg-[#e5c94f]"><img src={logoInfo} alt="Informações" className="h-5" /> <span className="hidden sm:inline">Sobre</span></a>
-            <button onClick={() => setAccessibilityMenuOpen(prev => !prev)} className="hidden rounded-lg bg-[#F4D35E] px-4 py-2 font-bold text-[#1D3557] transition hover:bg-[#e5c94f] md:block">Acessibilidade</button>
-          </div>
-          {isAccessibilityMenuOpen && <AccessibilityMenu onClose={() => setAccessibilityMenuOpen(false)} fontHandlers={fontHandlers} darkModeHandler={darkModeHandler} ttsHandler={ttsHandler} />}
-        </div>
-      </header>
+      <Header 
+        isMenuOpen={isAccessibilityMenuOpen}
+        onMenuToggle={() => setAccessibilityMenuOpen(prev => !prev)}
+        accessibilityHandlers={{ fontHandlers, darkModeHandler, ttsHandler }}
+      />
       
       <main className="mx-auto max-w-7xl px-4 space-y-12 md:space-y-16 my-8">
         <section className="text-center py-3">
@@ -335,13 +192,7 @@ export default function Home() {
         </section>
       </main>
 
-      <footer className="bg-[#1D3557] text-white">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between p-6 md:flex-row md:px-8 space-y-4 md:space-y-0">
-          <img src={logoSeau} alt="Logo Flor da Cidade" className="h-12" />
-          <p className="text-sm text-gray-300">© {new Date().getFullYear()} Flor da Cidade. Todos os direitos reservados.</p>
-          <div className="flex gap-4"><a href="https://wa.me" target="_blank" rel="noopener noreferrer" className="transition transform hover:scale-110"><img src={logoWpp} alt="WhatsApp" className="h-8" /></a><a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="transition transform hover:scale-110"><img src={logoInstagram} alt="Instagram" className="h-8" /></a></div>
-        </div>
-      </footer>
+      <Footer />
 
       <CourseModal course={selectedCourse} onClose={() => setSelectedCourse(null)} />
     </div>
