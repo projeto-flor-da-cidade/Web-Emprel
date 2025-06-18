@@ -1,3 +1,82 @@
 /* src/styles/index.css */
 
 @import "tailwindcss";
+
+/* Inserir em src/index.css (substituindo o .high-contrast anterior) */
+
+/* Estilos para o Modo Noturno */
+body.dark-mode {
+  /* Fundo principal escuro e cor de texto padrão clara */
+  background-color: #1a202c !important;
+  color: #d1d5db !important;
+}
+
+/* Sobrescreve cores de fundo específicas usadas no site */
+body.dark-mode .bg-\[\#F9FAFB\],
+body.dark-mode .bg-green-50 {
+  background-color: #1a202c !important; /* Fundo principal */
+}
+
+body.dark-mode .bg-\[\#adcbe3\] {
+  background-color: #2c3e50 !important; /* Fundo de seção azulado escuro */
+}
+
+body.dark-mode .bg-white,
+body.dark-mode .bg-\[\#e7eff6\] {
+  background-color: #2d3748 !important; /* Fundo de cards um pouco mais claro */
+  border: 1px solid #4a5568;
+}
+
+/* Sobrescreve cores de texto específicas */
+body.dark-mode .text-\[\#1D3557\] {
+  color: #a5c9e2 !important; /* Títulos em azul claro */
+}
+
+body.dark-mode .text-gray-600,
+body.dark-mode .text-gray-700 {
+  color: #d1d5db !important; /* Textos de parágrafo em cinza claro */
+}
+
+/* Ajusta o texto do botão amarelo para ter bom contraste no modo noturno */
+body.dark-mode .bg-\[\#F4D35E\] {
+  color: #1D3557 !important;
+}
+
+/* Garante que o header e o footer não sejam afetados, mas seu texto sim (se necessário) */
+/* Neste caso, o texto deles já é claro, então não precisamos de regras específicas */
+
+/* Garante que imagens e vídeos não fiquem excessivamente brilhantes */
+body.dark-mode img,
+body.dark-mode video {
+  filter: brightness(.85) contrast(1);
+}
+
+/* Evita que a lista do FAQ perca o fundo */
+body.dark-mode details {
+  background-color: #2d3748 !important;
+}
+
+/* Inserir em src/index.css */
+
+/* Estilos para o Modal de Cursos */
+.course-modal-content {
+  background-color: white;
+}
+
+/* Ajustes do Modal para o Modo Noturno */
+body.dark-mode .course-modal-content {
+  background-color: #2d3748; /* Cinza-ardósia escuro */
+  border-color: #4a5568;
+}
+
+body.dark-mode .course-modal-content .text-gray-500 {
+  color: #a0aec0;
+}
+
+body.dark-mode .course-modal-content .text-gray-700 {
+  color: #d1d5db;
+}
+
+body.dark-mode .course-modal-content .border-gray-200 {
+    border-color: #4a5568;
+}
