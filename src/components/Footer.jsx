@@ -2,7 +2,7 @@
 import React from 'react';
 import logoSeau from '../assets/images/logo_seau.png';
 import logoWpp from '../assets/images/logo-wpp.png';
-import logoInstagram from '../assets/images/Logo_Instagram.png';
+import logoInstagram from '../assets/images/logo-instagram.svg';
 
 const Footer = () => {
   return (

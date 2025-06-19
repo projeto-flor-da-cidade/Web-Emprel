@@ -1,9 +1,14 @@
-// src/components/CourseModal.jsx
 import React from 'react';
 import { FaTimes, FaMapMarkerAlt } from 'react-icons/fa';
 
 const CourseModal = ({ course, onClose }) => {
   if (!course) return null;
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Data não informada';
+    const [year, month, day] = dateString.split('-');
+    return `${day}/${month}/${year}`;
+  };
 
   return (
     <div 
@@ -11,7 +16,7 @@ const CourseModal = ({ course, onClose }) => {
       onClick={onClose}
     >
       <div 
-        className="course-modal-content w-full max-w-2xl rounded-2xl shadow-2xl p-6 md:p-8 relative max-h-[90vh] overflow-y-auto"
+        className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl p-6 md:p-8 relative max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 transition-colors">
@@ -19,7 +24,7 @@ const CourseModal = ({ course, onClose }) => {
         </button>
         
         <span className="inline-block bg-[#F4D35E] text-[#1D3557] font-bold text-sm px-3 py-1 rounded-full mb-4">
-          {course.tipo}
+          {course.tipoAtividade}
         </span>
         <h2 className="text-3xl font-extrabold text-[#1D3557] mb-4">{course.nome}</h2>
         
@@ -29,14 +34,17 @@ const CourseModal = ({ course, onClose }) => {
             <span>{course.local}</span>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 border-t border-gray-200 pt-4 mt-4">
-            <p><strong>Instituição:</strong> {course.instituicao}</p>
-            <p><strong>Público-alvo:</strong> {course.publicoAlvo}</p>
-            <p><strong>Inscrições:</strong> {course.inscricaoInicio} a {course.inscricaoFim}</p>
-            <p><strong>Período do curso:</strong> {course.cursoInicio} a {course.cursoFim}</p>
-            <p><strong>Turno:</strong> {course.turno}</p>
-            <p><strong>Vagas:</strong> Até {course.maxPessoas} pessoas</p>
-            <p className="md:col-span-2"><strong>Carga Horária:</strong> {course.cargaHoraria} horas</p>
+          <div className="border-t border-gray-200 pt-4 mt-4">
+            <p className="mb-4"><strong>Descrição:</strong> {course.descricao}</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                <p><strong>Instituição:</strong> {course.instituicao}</p>
+                <p><strong>Público-alvo:</strong> {course.publicoAlvo}</p>
+                <p><strong>Inscrições:</strong> {formatDate(course.dataInscInicio)} a {formatDate(course.dataInscFim)}</p>
+                <p><strong>Período do curso:</strong> {formatDate(course.dataInicio)} a {formatDate(course.dataFim)}</p>
+                <p><strong>Turno:</strong> {course.turno}</p>
+                <p><strong>Vagas:</strong> Até {course.maxPessoas} pessoas</p>
+                <p className="md:col-span-2"><strong>Carga Horária:</strong> {course.cargaHoraria} horas</p>
+            </div>
           </div>
         </div>
 
