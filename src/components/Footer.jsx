@@ -1,7 +1,7 @@
 // src/components/Footer.jsx
 import React from 'react';
 import logoSeau from '../assets/images/logo_seau.png';
-import logoWpp from '../assets/images/logo-wpp.png';
+import logoWpp from '../assets/images/logo-whatsapp.svg';
 import logoInstagram from '../assets/images/logo-instagram.svg';
 
 const Footer = () => {

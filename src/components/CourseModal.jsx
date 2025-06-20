@@ -4,10 +4,17 @@ import { FaTimes, FaMapMarkerAlt } from 'react-icons/fa';
 const CourseModal = ({ course, onClose }) => {
   if (!course) return null;
 
+  // Função de formatação de data mais robusta
   const formatDate = (dateString) => {
     if (!dateString) return 'Data não informada';
-    const [year, month, day] = dateString.split('-');
-    return `${day}/${month}/${year}`;
+    try {
+      // Adiciona T00:00:00 para garantir a interpretação correta da data, evitando problemas de fuso horário
+      const date = new Date(dateString + 'T00:00:00');
+      return date.toLocaleDateString('pt-BR');
+    } catch (error) {
+      console.error("Erro ao formatar data:", error);
+      return 'Data inválida';
+    }
   };
 
   return (
@@ -16,7 +23,7 @@ const CourseModal = ({ course, onClose }) => {
       onClick={onClose}
     >
       <div 
-        className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl p-6 md:p-8 relative max-h-[90vh] overflow-y-auto"
+        className="course-modal-content w-full max-w-2xl bg-white rounded-2xl shadow-2xl p-6 md:p-8 relative max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 transition-colors">
@@ -48,12 +55,20 @@ const CourseModal = ({ course, onClose }) => {
           </div>
         </div>
 
-        <button 
-          onClick={onClose} 
-          className="mt-8 w-full md:w-auto float-right rounded-lg bg-[#1D3557] text-white px-6 py-2 font-bold transition hover:bg-opacity-90"
-        >
-          Fechar
-        </button>
+        <div className="mt-8 flex justify-end items-center gap-4">
+            <button 
+              // Botão de inscrição não funcional, como solicitado
+              className="rounded-lg bg-[#F4D35E] text-[#1D3557] px-6 py-2 font-bold transition hover:bg-opacity-90 hover:scale-105"
+            >
+              Inscrever-se
+            </button>
+            <button 
+              onClick={onClose} 
+              className="rounded-lg bg-[#1D3557] text-white px-6 py-2 font-bold transition hover:bg-opacity-90"
+            >
+              Fechar
+            </button>
+        </div>
       </div>
     </div>
   );
