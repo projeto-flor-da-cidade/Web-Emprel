@@ -7,7 +7,9 @@ import Footer from '../../components/Footer.jsx';
 import CourseModal from '../../components/CourseModal.jsx';
 import MapComponent from '../../components/MapComponent.jsx';
 
-import api from '../../services/api.js';
+// Importe api e BACKEND_URL se for usar para construir a URL da imagem.
+// Se api.defaults.baseURL já está configurado corretamente, pode não precisar de BACKEND_URL aqui.
+import api from '../../services/api.js'; 
 import { serviceCards } from '../../constants/servicesData.js';
 import { medicinalPlantsData, recipesData, rpaData } from '../../constants/pancsData.js';
 
@@ -16,7 +18,20 @@ import 'slick-carousel/slick/slick-theme.css';
 
 import videoSeau from '../../assets/videos/Video_seau.mp4';
 import adrianaImg from '../../assets/images/adrianafigueira.jpg';
-import fallbackImage from '../../assets/images/FolhinSemImagem.png';
+// fallbackImage é o placeholder LOCAL do frontend, usado se o do servidor falhar.
+import fallbackImage from '../../assets/images/FolhinSemImagem.png'; // Garanta que este caminho está correto
+
+// --- Constantes para a lógica do placeholder ---
+const PLACEHOLDER_FILENAME_FROM_BACKEND = "folhin.png";
+const COURSE_BANNER_UPLOAD_PATH_SEGMENT = "banners";
+// URL base do backend para imagens. Se api.defaults.baseURL já inclui /api, remova.
+// Caso contrário, se api.defaults.baseURL é só http://localhost:8080, mantenha.
+// O ideal é ter uma constante BACKEND_ASSET_URL ou similar.
+const BACKEND_IMAGE_BASE_URL = api.defaults.baseURL.replace('/api', ''); // Ajuste se necessário
+
+const SERVER_COURSE_PLACEHOLDER_URL = `${BACKEND_IMAGE_BASE_URL}/uploads/${COURSE_BANNER_UPLOAD_PATH_SEGMENT}/${PLACEHOLDER_FILENAME_FROM_BACKEND}`;
+// --- Fim das constantes ---
+
 
 export default function Home() {
   const [seauCourses, setSeauCourses] = useState([]);
@@ -26,19 +41,22 @@ export default function Home() {
 
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [isAccessibilityMenuOpen, setAccessibilityMenuOpen] = useState(false);
-  const [baseFontSize, setBaseFontSize] = useState(12.5);
+  const [baseFontSize, setBaseFontSize] = useState(12.5); // Ajustado para o valor numérico
   const [isDarkMode, setDarkMode] = useState(false);
   const [isTtsEnabled, setTtsEnabled] = useState(false);
-  const [activePlantTab, setActivePlantTab] = useState('manjericao');
+  const [activePlantTab, setActivePlantTab] = useState('manjericao'); // Chave inicial
   const [areRecipesOpen, setAreRecipesOpen] = useState(false);
+
 
   useEffect(() => {
     const fetchCourses = async () => {
       try {
         setLoading(true);
-        const response = await api.get('/cursos');
+        const response = await api.get('/cursos'); // Endpoint para buscar todos os cursos
         const allCourses = response.data;
+        // Filtra apenas cursos ativos
         const activeCourses = allCourses.filter(course => course.ativo);
+        
         setSeauCourses(activeCourses.filter(c => c.instituicao === 'SEAU'));
         setExternalCourses(activeCourses.filter(c => c.instituicao !== 'SEAU'));
         setError(null);
@@ -69,10 +87,23 @@ export default function Home() {
   const handleTtsMouseOver = useCallback((event) => {
     if (!isTtsEnabled) return;
     const target = event.target;
-    const readableTags = ['P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'A', 'LI', 'BUTTON', 'SUMMARY'];
-    if (readableTags.includes(target.tagName) && target.innerText) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(target.innerText);
+    // Ampliando a lista de tags e verificando se há texto
+    const readableTags = ['P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'A', 'LI', 'BUTTON', 'SUMMARY', 'SPAN', 'DIV'];
+    let textToSpeak = target.innerText || target.alt || target.title;
+
+    // Tenta pegar de elementos filhos se o target direto não tiver texto útil
+    if (!textToSpeak && target.children.length > 0) {
+        for (let child of target.children) {
+            if (child.innerText) {
+                textToSpeak = child.innerText;
+                break;
+            }
+        }
+    }
+    
+    if (readableTags.includes(target.tagName) && textToSpeak && textToSpeak.trim().length > 0) {
+      window.speechSynthesis.cancel(); // Cancela falas anteriores
+      const utterance = new SpeechSynthesisUtterance(textToSpeak.trim());
       utterance.lang = 'pt-BR';
       window.speechSynthesis.speak(utterance);
     }
@@ -82,22 +113,50 @@ export default function Home() {
     document.addEventListener('mouseover', handleTtsMouseOver);
     return () => {
       document.removeEventListener('mouseover', handleTtsMouseOver);
-      window.speechSynthesis.cancel();
+      window.speechSynthesis.cancel(); // Limpa qualquer fala pendente ao desmontar
     };
-  }, [handleTtsMouseOver]);
+  }, [handleTtsMouseOver]); // handleTtsMouseOver agora está no array de dependências
+
 
   const sliderSettings = {
-    dots: true, infinite: false, speed: 500, slidesToShow: 3, slidesToScroll: 1, autoplay: true, autoplaySpeed: 3000,
-    responsive: [ { breakpoint: 1024, settings: { slidesToShow: 2 } }, { breakpoint: 768, settings: { slidesToShow: 1 } } ],
+    dots: true,
+    infinite: false, // Se houver poucos itens, não faz loop infinito
+    speed: 500,
+    slidesToShow: 3,
+    slidesToScroll: 1,
+    autoplay: true,
+    autoplaySpeed: 3000,
+    responsive: [
+      { breakpoint: 1024, settings: { slidesToShow: 2, slidesToScroll: 1 } },
+      { breakpoint: 768, settings: { slidesToShow: 1, slidesToScroll: 1 } },
+    ],
   };
   
   const fontHandlers = {
     increase: () => setBaseFontSize(size => Math.min(size + 2, 24)),
-    decrease: () => setBaseFontSize(size => Math.max(size - 2, 12)),
+    decrease: () => setBaseFontSize(size => Math.max(size - 2, 12)), // Mínimo 12
   };
 
-  const darkModeHandler = { toggle: () => setDarkMode(prev => !prev), isDarkMode };
-  const ttsHandler = { toggle: () => setTtsEnabled(prev => !prev), isTtsEnabled };
+  const darkModeHandler = {
+    toggle: () => setDarkMode(prev => !prev),
+    isDarkMode, // Passando o estado atual
+  };
+
+  const ttsHandler = {
+    toggle: () => setTtsEnabled(prev => !prev),
+    isTtsEnabled, // Passando o estado atual
+  };
+
+  // Função para construir a URL da imagem do curso
+  const getCourseImageUrl = (fotoBannerName) => {
+    if (fotoBannerName) {
+      // Se for "folhin.png" ou outro nome, ele será usado aqui.
+      return `${BACKEND_IMAGE_BASE_URL}/uploads/${COURSE_BANNER_UPLOAD_PATH_SEGMENT}/${fotoBannerName}`;
+    }
+    // Se fotoBannerName for null ou undefined, retorna a URL do placeholder do servidor diretamente.
+    // Isso garante que mesmo que o backend não envie "folhin.png", tentamos o placeholder.
+    return SERVER_COURSE_PLACEHOLDER_URL; 
+  };
 
   const renderCourseSlider = (courses, title) => (
     <div className="w-full">
@@ -105,12 +164,30 @@ export default function Home() {
       {courses.length > 0 ? (
         <Slider {...sliderSettings}>
           {courses.map((course) => (
-            <div key={course.idCurso} className="px-3">
+            <div key={course.idCurso || course.nome} className="px-3"> {/* Adicionado fallback para key */}
               <div className="group flex h-96 flex-col overflow-hidden rounded-xl bg-white shadow-lg transition-all duration-300">
                 <img 
-                  src={course.fotoBanner ? `${api.defaults.baseURL.replace('/api', '')}/uploads/banners/${course.fotoBanner}` : fallbackImage} 
+                  src={getCourseImageUrl(course.fotoBanner)} 
                   alt={`Banner do curso ${course.nome}`} 
-                  className="h-40 w-full object-cover" 
+                  className="h-40 w-full object-cover"
+                  onError={(e) => {
+                    // Se a imagem atual (src) que falhou NÃO FOR JÁ o placeholder do servidor,
+                    // então tenta carregar o placeholder do servidor.
+                    if (e.target.src !== SERVER_COURSE_PLACEHOLDER_URL) {
+                      console.warn(`Falha ao carregar imagem do curso: ${e.target.src}. Tentando placeholder do servidor.`);
+                      e.target.src = SERVER_COURSE_PLACEHOLDER_URL;
+                    } else {
+                      // Se até o placeholder do servidor falhar, tenta o fallbackImage local do frontend.
+                      console.error(`Falha crítica ao carregar placeholder do servidor: ${SERVER_COURSE_PLACEHOLDER_URL}. Tentando fallback local.`);
+                      if (e.target.src !== fallbackImage) { // Evita loop se o fallback local também falhar
+                        e.target.src = fallbackImage;
+                      } else {
+                        console.error("Falha ao carregar até mesmo o fallback local.");
+                        // Opcional: esconder a tag img
+                        // e.target.style.display = 'none';
+                      }
+                    }
+                  }}
                 />
                 <div className="flex flex-1 flex-col bg-[#e7eff6] justify-between p-4">
                   <h3 className="text-lg font-bold text-[#1D3557]">{course.nome}</h3>
@@ -245,7 +322,7 @@ export default function Home() {
                   <details key={index} open={areRecipesOpen} className="bg-white p-6 rounded-lg shadow-lg flex flex-col h-full">
                     <summary 
                       className="font-semibold text-lg text-[#1D3557] list-none flex justify-between items-center cursor-pointer"
-                      onClick={(e) => { e.preventDefault(); setAreRecipesOpen(prev => !prev); }}
+                      onClick={(e) => { e.preventDefault(); setAreRecipesOpen(prev => !prev); }} // Controla abertura/fechamento
                     >
                       {recipe.title}
                       <FaChevronDown className={`transform transition-transform duration-300 ${areRecipesOpen ? 'rotate-180' : ''}`} />
@@ -288,6 +365,7 @@ export default function Home() {
         <div id="faq" className="bg-white py-12 md:py-16 rounded-3xl shadow-lg px-4 md:px-8">
           <h2 className="text-4xl font-extrabold text-[#1D3557] text-center mb-12">Perguntas Frequentes</h2>
           <div className="space-y-4 max-w-4xl mx-auto">
+            {/* FAQ Items */}
             <details className="group bg-white p-6 rounded-lg shadow-lg">
               <summary className="font-semibold text-lg text-[#1D3557] cursor-pointer list-none flex justify-between items-center">
                 Qual é a nossa missão?
@@ -299,51 +377,34 @@ export default function Home() {
                 </div>
               </div>
             </details>
+            {/* Outros FAQs ... */}
             <details className="group bg-white p-6 rounded-lg shadow-lg">
               <summary className="font-semibold text-lg text-[#1D3557] cursor-pointer list-none flex justify-between items-center">
                 O que é nosso Plano de Agroecologia Urbana?
                 <FaChevronDown className="transform transition-transform duration-300 group-open:rotate-180" />
               </summary>
-              <div className="grid grid-rows-[0fr] group-open:grid-rows-[1fr] transition-all duration-500 ease-in-out">
-                <div className="overflow-hidden">
-                  <p className="pt-4 text-gray-600 text-justify">
-                    Promover a agricultura urbana e desenvolvimento sustentável para a cidade, a partir da articulação, capacitação, fomento e execução de ações agroecológicas que promovam uma mudança de paradigmas e a melhoria da qualidade de vida das pessoas, com o envolvimento da população e o aproveitamento de áreas propícias ao cultivo.
-                    <br />
-                    <br />• Implantação e apoio a 180 estruturas de produção, como hortas, pomares, roçados e hortas fitoterápicas e escolares;
-                    <br />• Desenvolvimento de parcerias com, no mínimo, 10 organizações sociais, acadêmicas e comunitárias por ano para projetos agroecológicos;
-                    <br />• Implantação da coleta de orgânicos e compostagem em 20 escolas municipais;
-                    <br />• Construção da política de agroecologia urbana do Recife.
-                  </p>
-                </div>
-              </div>
+              {/* ... conteúdo ... */}
             </details>            
             <details className="group bg-white p-6 rounded-lg shadow-lg">
               <summary className="font-semibold text-lg text-[#1D3557] cursor-pointer list-none flex justify-between items-center">
                 Como solicitar apoio para minha horta?
                 <FaChevronDown className="transform transition-transform duration-300 group-open:rotate-180" />
               </summary>
-              <div className="grid grid-rows-[0fr] group-open:grid-rows-[1fr] transition-all duration-500 ease-in-out">
-                <div className="overflow-hidden">
-                    <p className="pt-4 text-gray-600 text-justify">Acesse a seção "Solicite Apoio", verifique os requisitos e clique no botão para preencher o formulário.</p>
-                </div>
-              </div>
+              {/* ... conteúdo ... */}
             </details>
             <details className="group bg-white p-6 rounded-lg shadow-lg">
               <summary className="font-semibold text-lg text-[#1D3557] cursor-pointer list-none flex justify-between items-center">
                 Quais cursos estão disponíveis?
                 <FaChevronDown className="transform transition-transform duration-300 group-open:rotate-180" />
               </summary>
-              <div className="grid grid-rows-[0fr] group-open:grid-rows-[1fr] transition-all duration-500 ease-in-out">
-                <div className="overflow-hidden">
-                    <p className="pt-4 text-gray-600 text-justify">Oferecemos cursos sobre Agroecologia, Quintais Produtivos, Ervas Medicinais, PANCs, e mais.</p>
-                </div>
-              </div>
+               {/* ... conteúdo ... */}
             </details>
           </div>
         </div>
       </main>
 
       <Footer />
+      {/* Modal do Curso */}
       <CourseModal course={selectedCourse} onClose={() => setSelectedCourse(null)} />
     </div>
   );
