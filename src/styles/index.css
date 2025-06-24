@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+/* --- ESTILOS ESSENCIAIS PARA LEAFLET E PLUGINS --- */
+@import 'leaflet/dist/leaflet.css';
+@import 'leaflet.markercluster/dist/MarkerCluster.css';
+@import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
+@import 'leaflet-routing-machine/dist/leaflet-routing-machine.css'; /* ADICIONADO */
+/* --- FIM DOS ESTILOS ESSENCIAIS --- */
+
+
+
 html,
 body,
 #root {
