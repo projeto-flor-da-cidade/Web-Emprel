@@ -1,10 +1,9 @@
-// src/components/Header.jsx
 import React from 'react';
 import AccessibilityMenu from './AccessibilityMenu';
 import logoSeau from '../assets/images/logo_seau.png';
 import logoInfo from '../assets/images/logo_info.png';
 
-const Header = ({ isMenuOpen, onMenuToggle, accessibilityHandlers }) => {
+const Header = ({ isMenuOpen, onMenuToggle, accessibilityHandlers, onNavClick }) => {
   return (
     <header className="bg-[#1D3557] text-white shadow-md sticky top-0 z-[999]">
       <div className="relative mx-auto flex h-20 max-w-7xl items-center justify-between p-4 md:px-8">
@@ -15,7 +14,12 @@ const Header = ({ isMenuOpen, onMenuToggle, accessibilityHandlers }) => {
           <h1 className="text-2xl md:text-3xl font-bold">Flor da Cidade</h1>
         </div>
         <div className="flex items-center gap-4">
-          <a href="#detalhe4" className="flex items-center gap-2 rounded-lg bg-[#F4D35E] px-4 py-2 font-bold text-[#1D3557] transition hover:bg-[#e5c94f]">
+          {/* AJUSTE: ID padronizado para "contato" */}
+          <a 
+            href="#contato" 
+            onClick={(e) => onNavClick(e, '#contato')}
+            className="flex items-center gap-2 rounded-lg bg-[#F4D35E] px-4 py-2 font-bold text-[#1D3557] transition hover:bg-[#e5c94f]"
+          >
             <img src={logoInfo} alt="Informações" className="h-5" />
             <span className="hidden sm:inline">Sobre</span>
           </a>
