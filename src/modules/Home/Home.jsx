@@ -5,6 +5,7 @@ import { FaChevronDown } from 'react-icons/fa';
 import Header from '../../components/Header.jsx';
 import Footer from '../../components/Footer.jsx';
 import CourseModal from '../../components/CourseModal.jsx';
+import RegistrationModal from '../../components/RegistrationModal.jsx';
 import AcolhimentosSection from '../../components/AcolhimentosSection.jsx';
 import InformativosSection from '../../components/InformativosSection.jsx';
 import FaqSection from '../../components/FaqSection.jsx';
@@ -15,7 +16,6 @@ import { medicinalPlantsData, recipesData, rpaData } from '../../constants/pancs
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
 
-// Garanta que estas imagens existam na sua pasta `src/assets/images/`
 import apoioHortasImg from '../../assets/images/apoio-hortas.jpg'; 
 import cursosOficinasImg from '../../assets/images/cursos-oficinas.jpg';
 import novidadesImg from '../../assets/images/novidades.jpg';
@@ -35,6 +35,7 @@ export default function Home() {
   const [error, setError] = useState(null);
 
   const [selectedCourse, setSelectedCourse] = useState(null);
+  const [isRegistrationModalOpen, setRegistrationModalOpen] = useState(false);
   const [isAccessibilityMenuOpen, setAccessibilityMenuOpen] = useState(false);
   const [baseFontSize, setBaseFontSize] = useState(12.5);
   const [isDarkMode, setDarkMode] = useState(false);
@@ -68,6 +69,16 @@ export default function Home() {
   useEffect(() => {
     document.body.classList.toggle('dark-mode', isDarkMode);
   }, [isDarkMode]);
+  
+  const handleOpenRegistrationModal = (course) => {
+    setSelectedCourse(course);
+    setRegistrationModalOpen(true);
+  };
+
+  const handleCloseRegistrationModal = () => {
+    setRegistrationModalOpen(false);
+    setSelectedCourse(null);
+  };
 
   const handleTtsMouseOver = useCallback((event) => {
     if (!isTtsEnabled) return;
@@ -302,6 +313,7 @@ export default function Home() {
                       {recipe.title}
                       <FaChevronDown className={`transform transition-transform duration-300 ${areRecipesOpen ? 'rotate-180' : ''}`} />
                     </summary>
+                    {/* INÍCIO DA CORREÇÃO */}
                     <div className="mt-4 text-gray-600 space-y-3 text-sm">
                       {recipe.sections.map((section, sIndex) => (
                         <div key={sIndex}>
@@ -311,6 +323,7 @@ export default function Home() {
                         </div>
                       ))}
                     </div>
+                    {/* FIM DA CORREÇÃO */}
                   </details>
                 ))}
               </div>
@@ -342,7 +355,21 @@ export default function Home() {
       </main>
 
       <Footer />
-      <CourseModal course={selectedCourse} onClose={() => setSelectedCourse(null)} />
+
+      {selectedCourse && !isRegistrationModalOpen && (
+        <CourseModal 
+          course={selectedCourse} 
+          onClose={() => setSelectedCourse(null)}
+          onInscricaoClick={() => handleOpenRegistrationModal(selectedCourse)}
+        />
+      )}
+
+      {isRegistrationModalOpen && (
+        <RegistrationModal
+          course={selectedCourse}
+          onClose={handleCloseRegistrationModal}
+        />
+      )}
     </div>
   );
 }

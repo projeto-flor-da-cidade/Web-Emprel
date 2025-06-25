@@ -1,20 +1,23 @@
 import React from 'react';
 import { FaTimes, FaMapMarkerAlt } from 'react-icons/fa';
 
-const CourseModal = ({ course, onClose }) => {
+const CourseModal = ({ course, onClose, onInscricaoClick }) => {
   if (!course) return null;
 
-  // Função de formatação de data mais robusta
   const formatDate = (dateString) => {
     if (!dateString) return 'Data não informada';
     try {
-      // Adiciona T00:00:00 para garantir a interpretação correta da data, evitando problemas de fuso horário
       const date = new Date(dateString + 'T00:00:00');
       return date.toLocaleDateString('pt-BR');
     } catch (error) {
       console.error("Erro ao formatar data:", error);
       return 'Data inválida';
     }
+  };
+
+  const handleInscricao = () => {
+    onClose(); 
+    onInscricaoClick();
   };
 
   return (
@@ -57,7 +60,7 @@ const CourseModal = ({ course, onClose }) => {
 
         <div className="mt-8 flex justify-end items-center gap-4">
             <button 
-              // Botão de inscrição não funcional, como solicitado
+              onClick={handleInscricao}
               className="rounded-lg bg-[#F4D35E] text-[#1D3557] px-6 py-2 font-bold transition hover:bg-opacity-90 hover:scale-105"
             >
               Inscrever-se
