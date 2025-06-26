@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'; // <--- GARANTA QUE ESTA LINHA ESTEJA ASSIM
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-markercluster';
 import L from 'leaflet';
@@ -6,12 +6,11 @@ import {
     FiCompass, FiLoader, FiAlertTriangle, FiArrowRight, FiMaximize, FiMinimize,
     FiSearch, FiNavigation, FiX, FiMenu, FiChevronDown, FiPlus, FiMinus
 } from 'react-icons/fi';
-import { useNavigate } from 'react-router-dom';
+// import { useNavigate } from 'react-router-dom'; // REMOVIDO: Não vamos usar useNavigate aqui por enquanto
 import screenfull from 'screenfull';
 
 import api, { BACKEND_URL } from '../services/api';
 
-// Ícones importados como módulos
 import HortaComunitariaIcon from '../assets/icons/horta-comunitaria.svg';
 import HortaDefaultIcon from '../assets/icons/horta-default.svg';
 import HortaEscolarIcon from '../assets/icons/horta-escolar.svg';
@@ -20,7 +19,6 @@ import SeauIcon from '../assets/icons/seau.svg';
 import TerreiroIcon from '../assets/icons/terreiro.svg';
 import UnidadeDeSaudeIcon from '../assets/icons/unidade-de-saude.svg';
 
-// --- ÍCONES E CONFIGURAÇÕES DO MAPA ---
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
     iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
@@ -28,7 +26,6 @@ L.Icon.Default.mergeOptions({
     shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
 });
 
-// Função de normalização CORRIGIDA para lidar com acentos
 const normalizeTipoNome = (nome) => {
     if (!nome) return 'DEFAULT';
     return nome
@@ -39,7 +36,6 @@ const normalizeTipoNome = (nome) => {
         .replace(/[^A-Z0-9_]/g, '');
 };
 
-// Objeto Icons ATUALIZADO para corresponder aos nomes normalizados do banco de dados
 const Icons = {
     DEFAULT: new L.Icon({ iconUrl: HortaDefaultIcon, iconSize: [38, 38], iconAnchor: [19, 38], popupAnchor: [0, -38] }),
     ESCOLAR: new L.Icon({ iconUrl: HortaEscolarIcon, iconSize: [38, 38], iconAnchor: [19, 38], popupAnchor: [0, -38] }),
@@ -50,28 +46,78 @@ const Icons = {
     TERREIRO: new L.Icon({ iconUrl: TerreiroIcon, iconSize: [38, 38], iconAnchor: [19, 38], popupAnchor: [0, -38] }),
 };
 
-
-// --- COMPONENTES AUXILIARES ---
+// --- HortaPopup MODIFICADO ---
 const HortaPopup = ({ horta, onSetAsDestination }) => {
-    const navigate = useNavigate();
+    // const navigate = useNavigate(); // REMOVIDO
+
     const imageUrl = horta.imagemCaminho && horta.imagemCaminho !== 'folhin.png'
         ? `${BACKEND_URL}/uploads/imagem/${horta.imagemCaminho}`
         : '/placeholder-horta.png';
 
+    const nomeHorta = horta.nomeHorta || "Nome não disponível";
+    const endereco = horta.endereco || "Endereço não disponível";
+    const tipoHortaNome = horta.tipoDeHorta?.nome || "Tipo não especificado";
+    const nomeResponsavel = horta.usuario?.pessoa?.nome || "Responsável não informado";
+
+    const handleVerDetalhesClick = () => {
+        // Ação placeholder. Substitua pela lógica desejada (ex: abrir modal).
+        alert(`Implementar visualização de detalhes para: ${nomeHorta} (ID: ${horta.idHorta})`);
+        console.log("Dados da horta para detalhes:", horta);
+        // Se você tiver uma função para abrir um modal de detalhes, chame-a aqui:
+        // onOpenDetailsModal(horta); 
+    };
+
     return (
-        <div className="w-60 font-sans">
-            {horta.imagemCaminho && <img src={imageUrl} alt={horta.nomeHorta} className="w-full h-32 object-cover rounded-t-md" />}
+        <div className="w-64 font-sans text-sm">
+            <img 
+                src={imageUrl} 
+                alt={nomeHorta} 
+                className="w-full h-32 object-cover rounded-t-md bg-gray-200"
+                onError={(e) => { 
+                    e.target.onerror = null; 
+                    e.target.src = '/placeholder-horta.png'; 
+                }}
+            />
             <div className="p-3">
-                <h3 className="font-bold text-gray-800 mb-1 text-base truncate">{horta.nomeHorta}</h3>
-                <p className="text-xs text-gray-600 mb-2 line-clamp-2">{horta.endereco}</p>
-                <div className="space-y-1.5">
-                    <button onClick={() => navigate(`/hortas/${horta.idHorta}`)} className="w-full text-xs py-1.5 px-2 text-center font-medium text-green-700 bg-green-100 hover:bg-green-200 rounded-md flex items-center justify-center gap-1"> Ver Detalhes <FiArrowRight size={14}/> </button>
-                    <button onClick={() => onSetAsDestination(horta)} className="w-full text-xs py-1.5 px-2 text-center font-medium text-blue-700 bg-blue-100 hover:bg-blue-200 rounded-md flex items-center justify-center gap-1"> Destino <FiNavigation size={14}/> </button>
+                <h3 className="font-bold text-gray-800 text-base mb-1 truncate" title={nomeHorta}>
+                    {nomeHorta}
+                </h3>
+                <p className="text-xs text-gray-600 mb-0.5" title={endereco}>
+                    <span className="font-semibold">Endereço:</span> {endereco}
+                </p>
+                <p className="text-xs text-gray-600 mb-0.5">
+                    <span className="font-semibold">Tipo:</span> {tipoHortaNome}
+                </p>
+                {horta.usuario?.pessoa?.nome && (
+                    <p className="text-xs text-gray-600 mb-2"> 
+                        <span className="font-semibold">Responsável:</span> {nomeResponsavel}
+                    </p>
+                )}
+                
+                <div className="space-y-2 mt-3">
+                    <button 
+                        onClick={handleVerDetalhesClick} // MODIFICADO
+                        className="w-full text-xs py-2 px-3 text-center font-medium text-green-700 bg-green-100 hover:bg-green-200 rounded-md flex items-center justify-center gap-1.5 transition-colors duration-150"
+                    >
+                        Ver Detalhes <FiArrowRight size={14}/>
+                    </button>
+                    <button 
+                        onClick={() => {
+                            onSetAsDestination(horta);
+                        }} 
+                        className="w-full text-xs py-2 px-3 text-center font-medium text-blue-700 bg-blue-100 hover:bg-blue-200 rounded-md flex items-center justify-center gap-1.5 transition-colors duration-150"
+                    >
+                        Definir como Destino <FiNavigation size={14}/>
+                    </button>
                 </div>
             </div>
         </div>
     );
 };
+
+// --- Sidebar, MapControls, e a definição principal de MapComponent permanecem os mesmos da última versão ---
+// (Lembre-se de que o MapComponent principal deve ter a importação correta dos hooks do React,
+// como import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';)
 
 const Sidebar = ({
     tiposDeHorta, activeFilters, onToggleFilter, onSelectAllFilters,
@@ -215,7 +261,7 @@ const Sidebar = ({
                             <div className="flex gap-2">
                                 <button 
                                     onClick={onCalculateRoute} 
-                                    disabled={isCalculatingRoute || !startPoint && !currentDestinationHorta /* Pequena correção aqui, talvez? */ || !currentDestinationHorta}
+                                    disabled={isCalculatingRoute || !currentDestinationHorta}
                                     className="flex-1 py-2 px-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-1.5"
                                 >
                                     {isCalculatingRoute ? <FiLoader className="animate-spin"/> : <FiNavigation size={16}/>}
@@ -334,6 +380,7 @@ const MapControls = ({ onToggleFullScreen, isFullScreen, onToggleSidebar }) => {
         </>
     );
 };
+
 
 const MapComponent = ({ isEmbedded = false }) => {
     const [allHortas, setAllHortas] = useState([]);
