@@ -1,8 +1,8 @@
 import React from 'react';
 import MapComponent from './MapComponent.jsx';
 
-export default function AcolhimentosSection() {
-  // AJUSTE: ID padronizado para "acolhimentos"
+// ALTERAÇÃO: O componente agora aceita a prop 'onSolicitarClick'
+export default function AcolhimentosSection({ onSolicitarClick }) {
   return (
     <div id="acolhimentos" className="relative z-10 bg-white py-12 md:py-16 rounded-3xl shadow-lg px-4 md:px-8">
       <h2 className="text-4xl font-extrabold text-justify text-[#1D3557] mb-5">Nossos Acolhimentos</h2>
@@ -16,7 +16,13 @@ export default function AcolhimentosSection() {
           <li>Dispor de um espaço com acesso à água e sol.</li>
         </ol>
         <div>
-          <a href="#" className="inline-block rounded-full bg-[#F4D35E] px-8 py-3 font-bold text-[#1D3557] text-lg transition-transform duration-300 hover:scale-105 hover:bg-[#FFE46B]">Solicitar Acompanhamento!</a>
+          {/* ALTERAÇÃO: O link agora é um botão que dispara o evento onClick */}
+          <button 
+            onClick={onSolicitarClick} 
+            className="inline-block rounded-full bg-[#F4D35E] px-8 py-3 font-bold text-[#1D3557] text-lg transition-transform duration-300 hover:scale-105 hover:bg-[#FFE46B]"
+          >
+            Solicitar Acompanhamento!
+          </button>
         </div>
       </div>
     </div>
