@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-markercluster';
 import L from 'leaflet';
+import 'leaflet-geometryutil'; 
+// import 'leaflet-smoothwheelzoom'; // <<< LINHA COMENTADA/REMOVIDA
 import {
     FiCompass, FiLoader, FiAlertTriangle, FiArrowRight, FiMaximize, FiMinimize,
-    FiSearch, FiNavigation, FiX, FiMenu, FiChevronDown, FiPlus, FiMinus
+    FiSearch, FiNavigation, FiX, FiMenu, FiChevronDown, FiPlus, FiMinus, FiList
 } from 'react-icons/fi';
-// import { useNavigate } from 'react-router-dom'; // REMOVIDO: Não vamos usar useNavigate aqui por enquanto
 import screenfull from 'screenfull';
 
 import api, { BACKEND_URL } from '../services/api';
@@ -46,10 +47,13 @@ const Icons = {
     TERREIRO: new L.Icon({ iconUrl: TerreiroIcon, iconSize: [38, 38], iconAnchor: [19, 38], popupAnchor: [0, -38] }),
 };
 
-// --- HortaPopup MODIFICADO ---
-const HortaPopup = ({ horta, onSetAsDestination }) => {
-    // const navigate = useNavigate(); // REMOVIDO
+const ADVANCE_THRESHOLD_METERS = 25; 
+const OFF_ROUTE_THRESHOLD_METERS = 75; 
+const RECALCULATION_DEBOUNCE_MS = 8000; 
+const MIN_TIME_BETWEEN_RECALCS_MS = 20000;
 
+
+const HortaPopup = ({ horta, onSetAsDestination }) => {
     const imageUrl = horta.imagemCaminho && horta.imagemCaminho !== 'folhin.png'
         ? `${BACKEND_URL}/uploads/imagem/${horta.imagemCaminho}`
         : '/placeholder-horta.png';
@@ -60,11 +64,7 @@ const HortaPopup = ({ horta, onSetAsDestination }) => {
     const nomeResponsavel = horta.usuario?.pessoa?.nome || "Responsável não informado";
 
     const handleVerDetalhesClick = () => {
-        // Ação placeholder. Substitua pela lógica desejada (ex: abrir modal).
         alert(`Implementar visualização de detalhes para: ${nomeHorta} (ID: ${horta.idHorta})`);
-        console.log("Dados da horta para detalhes:", horta);
-        // Se você tiver uma função para abrir um modal de detalhes, chame-a aqui:
-        // onOpenDetailsModal(horta); 
     };
 
     return (
@@ -96,7 +96,7 @@ const HortaPopup = ({ horta, onSetAsDestination }) => {
                 
                 <div className="space-y-2 mt-3">
                     <button 
-                        onClick={handleVerDetalhesClick} // MODIFICADO
+                        onClick={handleVerDetalhesClick}
                         className="w-full text-xs py-2 px-3 text-center font-medium text-green-700 bg-green-100 hover:bg-green-200 rounded-md flex items-center justify-center gap-1.5 transition-colors duration-150"
                     >
                         Ver Detalhes <FiArrowRight size={14}/>
@@ -115,10 +115,6 @@ const HortaPopup = ({ horta, onSetAsDestination }) => {
     );
 };
 
-// --- Sidebar, MapControls, e a definição principal de MapComponent permanecem os mesmos da última versão ---
-// (Lembre-se de que o MapComponent principal deve ter a importação correta dos hooks do React,
-// como import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';)
-
 const Sidebar = ({
     tiposDeHorta, activeFilters, onToggleFilter, onSelectAllFilters,
     searchTerm, onSearchTermChange, onSearchSubmit,
@@ -126,10 +122,12 @@ const Sidebar = ({
     allHortasForSearch,
     currentDestinationHorta,
     onDestinationHortaSelected,
-    onCalculateRoute, onClearRoute, isCalculatingRoute, onClose
+    onCalculateRoute, onClearRoute, isCalculatingRoute, onClose,
+    routeInstructions, currentStepIndex, distanceToNextManeuver
 }) => {
     const [isFiltersOpen, setIsFiltersOpen] = useState(true);
     const [isRoutePlannerOpen, setIsRoutePlannerOpen] = useState(true);
+    const [isInstructionsOpen, setIsInstructionsOpen] = useState(true);
     const allFiltersActuallySelected = tiposDeHorta.length > 0 && activeFilters.length === tiposDeHorta.length;
     const isEffectivelyAllSelected = activeFilters.length === 0 || allFiltersActuallySelected;
 
@@ -137,15 +135,31 @@ const Sidebar = ({
     const [destinationSuggestions, setDestinationSuggestions] = useState([]);
     const [showDestinationSuggestions, setShowDestinationSuggestions] = useState(false);
     const destinationInputRef = useRef(null);
+    const instructionRefs = useRef([]); 
+    const instructionsContainerRef = useRef(null);
+
 
     useEffect(() => {
         if (currentDestinationHorta) {
             setDestinationSearchTerm(currentDestinationHorta.nomeHorta);
             setShowDestinationSuggestions(false);
+            if (routeInstructions.length > 0) {
+                setIsInstructionsOpen(true);
+            }
         } else {
             setDestinationSearchTerm('');
         }
-    }, [currentDestinationHorta]);
+    }, [currentDestinationHorta, routeInstructions]);
+
+    useEffect(() => {
+        if (instructionRefs.current[currentStepIndex] && instructionsContainerRef.current) {
+            instructionRefs.current[currentStepIndex].scrollIntoView({
+                behavior: 'smooth',
+                block: 'nearest',
+            });
+        }
+    }, [currentStepIndex]);
+
 
     const handleDestinationSearchChange = (e) => {
         const query = e.target.value;
@@ -180,6 +194,12 @@ const Sidebar = ({
             document.removeEventListener("mousedown", handleClickOutside);
         };
     }, [destinationInputRef]);
+
+    const formatDistance = (meters) => {
+        if (meters < 0 || meters === null || meters === undefined) return "";
+        if (meters < 1000) return `${meters.toFixed(0)} m`;
+        return `${(meters / 1000).toFixed(1)} km`;
+    };
 
     return (
         <div className="w-full sm:w-80 md:w-96 h-full bg-white shadow-2xl flex flex-col">
@@ -260,7 +280,7 @@ const Sidebar = ({
                             </div>
                             <div className="flex gap-2">
                                 <button 
-                                    onClick={onCalculateRoute} 
+                                    onClick={() => onCalculateRoute()} 
                                     disabled={isCalculatingRoute || !currentDestinationHorta}
                                     className="flex-1 py-2 px-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-1.5"
                                 >
@@ -272,84 +292,138 @@ const Sidebar = ({
                         </div>
                     )}
                 </section>
+                 {routeInstructions && routeInstructions.length > 0 && (
+                    <section>
+                        <button onClick={() => setIsInstructionsOpen(!isInstructionsOpen)} className="flex items-center justify-between w-full py-2 text-left font-semibold text-gray-700">
+                            <span className="text-sm uppercase text-gray-500">Instruções da Rota</span>
+                            <FiChevronDown className={`transform transition-transform ${isInstructionsOpen ? 'rotate-180' : ''}`} />
+                        </button>
+                        {isInstructionsOpen && (
+                            <div ref={instructionsContainerRef} className="mt-2 space-y-1 text-sm max-h-60 overflow-y-auto border border-gray-200 rounded-md p-2">
+                                {routeInstructions.map((step, index) => (
+                                    <div 
+                                        key={index} 
+                                        ref={el => instructionRefs.current[index] = el}
+                                        className={`p-2 rounded-md ${index === currentStepIndex ? 'bg-blue-100 text-blue-700 font-semibold' : 'hover:bg-gray-50'}`}
+                                    >
+                                        <p>{index + 1}. {step.maneuver.instruction}
+                                            {index === currentStepIndex && distanceToNextManeuver > 0 && (
+                                                <span className="text-xs ml-2 font-normal">({formatDistance(distanceToNextManeuver)})</span>
+                                            )}
+                                        </p>
+                                        {step.name && step.name.trim() !== '' && <p className="text-xs text-gray-500 pl-4">{step.name} ({formatDistance(step.distance)})</p>}
+                                    </div>
+                                ))}
+                                {currentStepIndex >= routeInstructions.length && routeInstructions.length > 0 && (
+                                    <div className="p-2 text-green-600 font-semibold">Você chegou ao seu destino!</div>
+                                )}
+                            </div>
+                        )}
+                    </section>
+                )}
             </div>
         </div>
     );
 };
 
-const MapControls = ({ onToggleFullScreen, isFullScreen, onToggleSidebar }) => {
+const MapControls = ({ 
+    onToggleFullScreen, isFullScreen, onToggleSidebar, 
+    onLocationUpdate, isRouteActive, isFollowingUser, onToggleFollowMe 
+}) => {
     const map = useMap();
-    const [locationMarker, setLocationMarker] = useState(null);
-    const [accuracyCircle, setAccuracyCircle] = useState(null);
+    const userMarkerRef = useRef(null);
+    const accuracyCircleRef = useRef(null);
 
     const zoomIn = () => map.zoomIn();
     const zoomOut = () => map.zoomOut();
-
-    const locateUser = () => {
-        if (locationMarker) {
-            map.removeLayer(locationMarker);
-            setLocationMarker(null);
-        }
-        if (accuracyCircle) {
-            map.removeLayer(accuracyCircle);
-            setAccuracyCircle(null);
+    
+    const handleWatchLocationFound = useCallback((e) => {
+        const radius = e.accuracy;
+        const latlng = e.latlng;
+        let popupMessage = `Você está aqui (precisão de ${radius.toFixed(0)} m).`;
+        if (radius > 1000) {
+            popupMessage = `Sua localização é aproximada (raio de ${radius.toFixed(0)} m). Para maior precisão, tente em um local aberto ou verifique as configurações do seu dispositivo.`;
         }
 
-        map.locate({
-            setView: true,
-            maxZoom: 16,
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 0
-        });
-    };
+        if (!userMarkerRef.current) {
+            userMarkerRef.current = L.marker(latlng).addTo(map);
+            userMarkerRef.current.bindPopup(popupMessage).openPopup();
+        } else {
+            userMarkerRef.current.setLatLng(latlng);
+            userMarkerRef.current.setPopupContent(popupMessage).openPopup();
+        }
+
+        if (!accuracyCircleRef.current) {
+            accuracyCircleRef.current = L.circle(latlng, radius).addTo(map);
+        } else {
+            accuracyCircleRef.current.setLatLng(latlng).setRadius(radius);
+        }
+        if(onLocationUpdate) {
+            onLocationUpdate(latlng);
+        }
+    }, [map, onLocationUpdate]);
+
+    const handleWatchLocationError = useCallback((e) => {
+        map.stopLocate();
+        if(onToggleFollowMe && isFollowingUser) onToggleFollowMe(false); 
+
+        let message = "Erro ao seguir sua localização: ";
+        switch (e.code) {
+            case 1: message += "Permissão negada."; break;
+            case 2: message += "Localização indisponível."; break;
+            case 3: message += "Tempo esgotado."; break;
+            default: message += e.message;
+        }
+        alert(message);
+        if (userMarkerRef.current && map.hasLayer(userMarkerRef.current)) {
+            map.removeLayer(userMarkerRef.current);
+            userMarkerRef.current = null;
+        }
+        if (accuracyCircleRef.current && map.hasLayer(accuracyCircleRef.current)) {
+            map.removeLayer(accuracyCircleRef.current);
+            accuracyCircleRef.current = null;
+        }
+    }, [map, onToggleFollowMe, isFollowingUser]);
+
+    const localToggleFollowMe = useCallback(() => {
+        if (isFollowingUser) {
+            map.stopLocate();
+            map.off('locationfound', handleWatchLocationFound);
+            map.off('locationerror', handleWatchLocationError);
+            if (onToggleFollowMe) onToggleFollowMe(false);
+            if (userMarkerRef.current && map.hasLayer(userMarkerRef.current)) {
+                map.removeLayer(userMarkerRef.current);
+                userMarkerRef.current = null;
+            }
+            if (accuracyCircleRef.current && map.hasLayer(accuracyCircleRef.current)) {
+                map.removeLayer(accuracyCircleRef.current);
+                accuracyCircleRef.current = null;
+            }
+        } else {
+            if (userMarkerRef.current && map.hasLayer(userMarkerRef.current)) map.removeLayer(userMarkerRef.current);
+            if (accuracyCircleRef.current && map.hasLayer(accuracyCircleRef.current)) map.removeLayer(accuracyCircleRef.current);
+            userMarkerRef.current = null;
+            accuracyCircleRef.current = null;
+            
+            map.on('locationfound', handleWatchLocationFound);
+            map.on('locationerror', handleWatchLocationError);
+            map.locate({ setView: !isRouteActive, maxZoom: 16, enableHighAccuracy: true, watch: true, timeout: 10000, maximumAge: 0 });
+            if (onToggleFollowMe) onToggleFollowMe(true);
+        }
+    }, [map, isFollowingUser, handleWatchLocationFound, handleWatchLocationError, onToggleFollowMe, isRouteActive]);
 
     useEffect(() => {
-        const handleLocationFound = (e) => {
-            const radius = e.accuracy;
-            const latlng = e.latlng;
-
-            if (locationMarker && map.hasLayer(locationMarker)) map.removeLayer(locationMarker);
-            if (accuracyCircle && map.hasLayer(accuracyCircle)) map.removeLayer(accuracyCircle);
-            
-            const newMarker = L.marker(latlng).addTo(map);
-            let popupMessage = `Você está aqui (precisão de ${radius.toFixed(0)} m).`;
-            if (radius > 1000) {
-                popupMessage = `Sua localização é aproximada (raio de ${radius.toFixed(0)} m). Para maior precisão, tente em um local aberto ou verifique as configurações do seu dispositivo.`;
-            }
-            newMarker.bindPopup(popupMessage).openPopup();
-            setLocationMarker(newMarker);
-
-            const newCircle = L.circle(latlng, radius).addTo(map);
-            setAccuracyCircle(newCircle);
-        };
-
-        const handleLocationError = (e) => {
-            let message = "Erro ao obter localização: ";
-            switch (e.code) {
-                case 1: 
-                    message += "Permissão negada. Verifique as configurações de localização do seu navegador e sistema.";
-                    break;
-                case 2: 
-                    message += "Localização indisponível no momento. Tente novamente.";
-                    break;
-                case 3: 
-                    message += "Tempo esgotado ao tentar obter a localização. Tente novamente.";
-                    break;
-                default:
-                    message += e.message;
-            }
-            alert(message);
-        };
-
-        map.on('locationfound', handleLocationFound);
-        map.on('locationerror', handleLocationError);
-
         return () => {
-            map.off('locationfound', handleLocationFound);
-            map.off('locationerror', handleLocationError);
+            if (map && isFollowingUser) { 
+                map.stopLocate();
+                map.off('locationfound', handleWatchLocationFound);
+                map.off('locationerror', handleWatchLocationError);
+                 if (userMarkerRef.current && map.hasLayer(userMarkerRef.current)) map.removeLayer(userMarkerRef.current);
+                 if (accuracyCircleRef.current && map.hasLayer(accuracyCircleRef.current)) map.removeLayer(accuracyCircleRef.current);
+            }
         };
-    }, [map, locationMarker, accuracyCircle]);
+    }, [map, isFollowingUser, handleWatchLocationFound, handleWatchLocationError]);
+
 
     return (
         <>
@@ -367,8 +441,12 @@ const MapControls = ({ onToggleFullScreen, isFullScreen, onToggleSidebar }) => {
                     <button onClick={zoomOut} title="Afastar" className="p-2.5 bg-white hover:bg-gray-100 border-t border-gray-200"><FiMinus className="w-5 h-5 text-gray-700"/></button>
                  </div>
                  <div className="leaflet-control leaflet-bar mt-2 mr-2">
-                    <button onClick={locateUser} title="Achar minha localização" className="p-2.5 bg-white hover:bg-gray-100">
-                        <FiCompass className="w-5 h-5 text-gray-700" />
+                    <button 
+                        onClick={localToggleFollowMe} 
+                        title={isFollowingUser ? "Parar de seguir" : "Achar minha localização e seguir"} 
+                        className="p-2.5 bg-white hover:bg-gray-100"
+                    >
+                        <FiCompass className={`w-5 h-5 ${isFollowingUser ? (isRouteActive ? 'text-green-500 animate-pulse' : 'text-blue-500 animate-pulse') : 'text-gray-700'}`} />
                     </button>
                     {screenfull.isEnabled && (
                         <button onClick={onToggleFullScreen} title={isFullScreen ? "Sair da Tela Cheia" : "Tela Cheia"} className="p-2.5 bg-white hover:bg-gray-100 border-t border-gray-200">
@@ -395,9 +473,83 @@ const MapComponent = ({ isEmbedded = false }) => {
     const [searchTerm, setSearchTerm] = useState("");
     const [startPoint, setStartPoint] = useState("");
     const [destinationHorta, setDestinationHorta] = useState(null);
-    const [routingControl, setRoutingControl] = useState(null);
+    const [routingControl, setRoutingControl] = useState(null); 
+    const currentRoutePolylineRef = useRef(null); 
     const [isCalculatingRoute, setIsCalculatingRoute] = useState(false);
     const mapRef = useRef(null);
+
+    const [routeInstructions, setRouteInstructions] = useState([]);
+    const [currentStepIndex, setCurrentStepIndex] = useState(-1);
+    const [distanceToNextManeuver, setDistanceToNextManeuver] = useState(null);
+    const [isFollowingUser, setIsFollowingUser] = useState(false);
+    
+    const [voices, setVoices] = useState([]);
+    const [selectedVoice, setSelectedVoice] = useState(null);
+    const speechSupported = typeof window !== 'undefined' && window.speechSynthesis;
+
+    const offRouteRecalculateTimeoutRef = useRef(null);
+    const lastRecalculationTimeRef = useRef(0);
+
+
+    useEffect(() => {
+        const loadVoices = () => {
+            if (!speechSupported) return;
+            const availableVoices = window.speechSynthesis.getVoices();
+            if (availableVoices.length > 0) {
+                setVoices(availableVoices);
+                const ptBRVoice = availableVoices.find(voice => voice.lang === 'pt-BR') || 
+                                  availableVoices.find(voice => voice.lang === 'pt-PT') ||
+                                  availableVoices.find(voice => voice.lang.startsWith('pt-')) ||
+                                  availableVoices.find(voice => voice.default && voice.lang.startsWith('pt')) ||
+                                  availableVoices[0]; 
+                setSelectedVoice(ptBRVoice);
+            }
+        };
+        loadVoices();
+        if (speechSupported) {
+            window.speechSynthesis.onvoiceschanged = loadVoices;
+        }
+        return () => {
+            if (speechSupported) {
+                window.speechSynthesis.onvoiceschanged = null;
+                window.speechSynthesis.cancel();
+            }
+        };
+    }, [speechSupported]);
+
+    const speak = useCallback((text) => {
+        if (!speechSupported || !selectedVoice || !text) return;
+        window.speechSynthesis.cancel(); 
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.voice = selectedVoice;
+        utterance.lang = selectedVoice.lang;
+        utterance.rate = 1; 
+        utterance.pitch = 1; 
+        window.speechSynthesis.speak(utterance);
+    }, [speechSupported, selectedVoice]);
+
+    const cancelSpeech = useCallback(() => {
+        if (speechSupported) {
+            window.speechSynthesis.cancel();
+        }
+    }, [speechSupported]);
+
+
+    useEffect(() => {
+        if (!isFollowingUser || !speechSupported || !selectedVoice) {
+            cancelSpeech();
+            return;
+        }
+    
+        if (routeInstructions.length > 0 && currentStepIndex > 0 && currentStepIndex < routeInstructions.length) {
+            const currentInstruction = routeInstructions[currentStepIndex];
+            let textToSpeak = currentInstruction.maneuver.instruction;
+            speak(textToSpeak);
+        } else if (routeInstructions.length > 0 && currentStepIndex >= routeInstructions.length) {
+            speak("Você chegou ao seu destino.");
+        }
+    }, [currentStepIndex, routeInstructions, speak, isFollowingUser, speechSupported, selectedVoice, cancelSpeech]);
+
 
     const initialPosition = [-8.05428, -34.8813];
 
@@ -414,7 +566,6 @@ const MapComponent = ({ isEmbedded = false }) => {
     const fetchAndGeocodeHortas = useCallback(async (term = "") => {
         setLoadingMessage('Carregando lista de hortas...');
         setError(null);
-        setAllHortas([]);
         try {
             const response = await api.get('/hortas/public/ativas');
             let hortasParaGeocodificar = response.data;
@@ -429,29 +580,28 @@ const MapComponent = ({ isEmbedded = false }) => {
 
             if (!hortasParaGeocodificar || hortasParaGeocodificar.length === 0) {
                 setLoadingMessage(term ? 'Nenhuma horta encontrada com o termo pesquisado.' : 'Nenhuma horta ativa encontrada no momento.');
+                 setAllHortas([]); 
+                 setFilteredHortas([]);
                 return;
             }
             setLoadingMessage(`Geocodificando ${hortasParaGeocodificar.length} endereços... Isso pode levar alguns instantes.`);
 
             const geocodePromises = hortasParaGeocodificar.map(async (horta) => {
                 const fullAddress = `${horta.endereco}, Recife, PE, Brasil`;
-                const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fullAddress)}&limit=1`;
+                const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fullAddress)}&limit=1&countrycodes=br&addressdetails=1`;
 
                 try {
-                    await new Promise(resolve => setTimeout(resolve, Math.random() * 100 + 50));
-                    const geoResponse = await fetch(url);
+                    await new Promise(resolve => setTimeout(resolve, Math.random() * 100 + 100));
+                    const geoResponse = await fetch(url, { headers: { 'User-Agent': 'FlorDaCidadeMap/1.0 (https://flordacidade.recife.pe.gov.br)' }});
                     if (!geoResponse.ok) {
-                        console.warn(`Erro na geocodificação (HTTP ${geoResponse.status}): ${horta.endereco}`);
                         return null;
                     }
                     const data = await geoResponse.json();
                     if (data && data[0]) {
                         return { ...horta, latitude: parseFloat(data[0].lat), longitude: parseFloat(data[0].lon) };
                     }
-                    console.warn(`Endereço não encontrado ou geocodificação falhou para: ${horta.endereco}`);
                     return null;
                 } catch (err) {
-                    console.error(`Falha ao geocodificar o endereço: ${horta.endereco}`, err);
                     return null;
                 }
             });
@@ -466,7 +616,6 @@ const MapComponent = ({ isEmbedded = false }) => {
             }
         } catch (err) {
             setError("Erro crítico: Não foi possível carregar os dados das hortas. Verifique sua conexão ou tente mais tarde.");
-            console.error("Erro ao buscar/geocodificar hortas:", err);
         } finally {
             setLoadingMessage('');
         }
@@ -499,120 +648,282 @@ const MapComponent = ({ isEmbedded = false }) => {
         }
     };
 
-    const handleCalculateRoute = useCallback(async () => {
-        if (!mapRef.current || !destinationHorta) {
+    const handleToggleFollowMeState = useCallback((following) => {
+        setIsFollowingUser(following);
+        if (!following) {
+            cancelSpeech();
+            clearTimeout(offRouteRecalculateTimeoutRef.current);
+            offRouteRecalculateTimeoutRef.current = null;
+        }
+    }, [cancelSpeech]);
+
+    const handleCalculateRoute = useCallback(async (arg) => {
+        const isForcedStart = arg instanceof L.LatLng;
+        const forcedStartLatLng = isForcedStart ? arg : null;
+
+        console.log("Attempting to calculate route. Is ForcedStart:", isForcedStart, "ForcedCoords:", forcedStartLatLng);
+
+        if (!mapRef.current) {
+            console.error("Map reference is not available.");
+            return;
+        }
+        if (!destinationHorta) { 
             alert("Por favor, selecione uma horta de destino.");
             return;
         }
         
-        const isUsingCurrentLocationAsStart = !startPoint.trim(); 
+        const isUsingCurrentLocationAsStart = !startPoint.trim() || startPoint.toLowerCase().includes('minha localização') || startPoint.toLowerCase().includes('local atual'); 
 
         setIsCalculatingRoute(true);
-        if (routingControl) {
-            mapRef.current.removeControl(routingControl);
-            setRoutingControl(null);
+        cancelSpeech();
+        if (routingControl && mapRef.current.hasLayer(routingControl)) {
+            mapRef.current.removeLayer(routingControl);
         }
+        setRoutingControl(null);
+        currentRoutePolylineRef.current = null;
+        clearTimeout(offRouteRecalculateTimeoutRef.current);
+        offRouteRecalculateTimeoutRef.current = null;
+        
+        setRouteInstructions([]);
+        setCurrentStepIndex(-1);
+        setDistanceToNextManeuver(null);
 
         try {
             let startLatLng;
+            let startPointDisplay = startPoint;
 
-            if (isUsingCurrentLocationAsStart || startPoint.toLowerCase().includes('minha localização') || startPoint.toLowerCase().includes('local atual')) {
-                if (isUsingCurrentLocationAsStart) {
-                    console.log("Ponto de partida não definido, usando localização atual.");
+            if (forcedStartLatLng) {
+                startLatLng = forcedStartLatLng;
+                startPointDisplay = "Localização Atual (Rota Recalculada)";
+            } else if (isUsingCurrentLocationAsStart) {
+                startPointDisplay = "Minha Localização Atual";
+                if (!isFollowingUser && startPoint.trim() === '') { 
+                     alert("Por favor, ative o seguimento da sua localização ou digite um ponto de partida.");
+                     setIsCalculatingRoute(false); return;
                 }
                 await new Promise((resolve, reject) => {
                     mapRef.current.locate({
-                        setView: false,
-                        maxZoom: 16,
-                        watch: false,
-                        enableHighAccuracy: true,
-                        timeout: 15000,
-                        maximumAge: 0
+                        setView: false, maxZoom: 16, watch: false, enableHighAccuracy: true,
+                        timeout: 15000, maximumAge: 0
                     });
                     mapRef.current.once('locationfound', (e) => {
-                        const accuracy = e.accuracy;
-                        console.log(`Precisão da localização para rota: ${accuracy} metros`);
-                        if (accuracy > 2000) {
-                            if (!window.confirm(`Sua localização inicial tem uma precisão de ${accuracy.toFixed(0)} metros. A rota pode não ser exata. Deseja continuar?`)) {
-                                reject(new Error("Localização com baixa precisão, cálculo de rota cancelado pelo usuário."));
-                                return;
-                            }
+                        if (e.accuracy > 2000 && !window.confirm(`Sua localização inicial tem uma precisão de ${e.accuracy.toFixed(0)} metros. A rota pode não ser exata. Deseja continuar?`)) {
+                            reject(new Error("Localização com baixa precisão, cálculo de rota cancelado pelo usuário.")); return;
                         }
-                        startLatLng = e.latlng;
-                        resolve();
+                        startLatLng = e.latlng; resolve();
                     });
                     mapRef.current.once('locationerror', (e) => {
-                         console.error("Erro ao obter localização do usuário para rota:", e);
-                         let message = "Não foi possível obter sua localização atual para a rota. ";
-                         switch (e.code) {
-                             case 1: message += "Permissão negada."; break;
-                             case 2: message += "Localização indisponível."; break;
-                             case 3: message += "Tempo esgotado."; break;
-                             default: message += "Erro desconhecido.";
-                         }
-                         alert(message + " Verifique as permissões e tente novamente, ou digite um endereço de partida.");
+                         let msg = "Não foi possível obter sua localização atual para a rota. ";
+                         switch (e.code) { case 1: msg += "Permissão negada."; break; case 2: msg += "Localização indisponível."; break; case 3: msg += "Tempo esgotado."; break; default: msg += "Erro desconhecido.";}
+                         alert(msg + " Verifique as permissões e tente novamente, ou digite um endereço de partida.");
                          reject(new Error("Erro de localização para rota: " + e.message));
                     });
                 });
             } else {
-                const geoResponse = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(startPoint)}&limit=1`);
+                startPointDisplay = startPoint;
+                const geoResponse = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(startPoint + ", Recife, PE, Brasil")}&limit=1&countrycodes=br&addressdetails=1`, { headers: { 'User-Agent': 'FlorDaCidadeMap/1.0 (https://flordacidade.recife.pe.gov.br)' }});
                 const geoData = await geoResponse.json();
                 if (geoData && geoData[0]) {
                     startLatLng = L.latLng(parseFloat(geoData[0].lat), parseFloat(geoData[0].lon));
                 } else {
-                    alert("Ponto de partida digitado não encontrado.");
-                    setIsCalculatingRoute(false);
-                    return;
+                    alert("Ponto de partida digitado não encontrado."); setIsCalculatingRoute(false); return;
                 }
             }
 
-            if (!startLatLng) {
-                 setIsCalculatingRoute(false);
-                 return;
+            if (!startLatLng || typeof startLatLng.lat !== 'number' || typeof startLatLng.lng !== 'number' || isNaN(startLatLng.lat) || isNaN(startLatLng.lng)) {
+                console.error("Invalid startLatLng before OSRM call:", startLatLng);
+                alert("Ponto de partida inválido (NaN ou não numérico). Não foi possível calcular a rota.");
+                setIsCalculatingRoute(false); return;
+            }
+             if (!destinationHorta || typeof destinationHorta.latitude !== 'number' || typeof destinationHorta.longitude !== 'number' || isNaN(destinationHorta.latitude) || isNaN(destinationHorta.longitude)) {
+                console.error("Invalid destinationHorta coordinates before OSRM call:", destinationHorta);
+                alert("Coordenadas do destino inválidas (NaN ou não numéricas). Não foi possível calcular a rota.");
+                setIsCalculatingRoute(false); return;
             }
 
+
             const destLatLng = L.latLng(destinationHorta.latitude, destinationHorta.longitude);
+
+            console.log("Start Coords for OSRM:", { lat: startLatLng.lat, lng: startLatLng.lng });
+            console.log("Dest Coords for OSRM:", { lat: destLatLng.lat, lng: destLatLng.lng });
+
+            if (startLatLng.distanceTo(destLatLng) < 1) { 
+                alert("O ponto de partida e o destino estão muito próximos ou são idênticos. Não é possível calcular a rota.");
+                setIsCalculatingRoute(false); return;
+            }
+
             const osrmBaseUrl = 'https://router.project-osrm.org/route/v1';
-            const profile = 'driving';
-            const osrmUrl = `${osrmBaseUrl}/${profile}/${startLatLng.lng},${startLatLng.lat};${destLatLng.lng},${destLatLng.lat}?overview=full&geometries=geojson`;
+            const profile = 'driving'; 
+            const osrmUrl = `${osrmBaseUrl}/${profile}/${startLatLng.lng},${startLatLng.lat};${destLatLng.lng},${destLatLng.lat}?overview=full&geometries=geojson&steps=true`;
+            
+            console.log("Constructed OSRM URL:", osrmUrl);
 
             const routeResponse = await fetch(osrmUrl);
+            
+            console.log("OSRM Response Status:", routeResponse.status, routeResponse.statusText);
+
+            if (!routeResponse.ok) {
+                const errorText = await routeResponse.text();
+                console.error("OSRM Error Raw Response:", errorText);
+                let errorDataMessage = 'Erro desconhecido do servidor de rotas.';
+                try {
+                    const errorJson = JSON.parse(errorText);
+                    errorDataMessage = errorJson.message || errorDataMessage;
+                } catch (e) {
+                    if(errorText.length < 200) errorDataMessage = errorText;
+                }
+                alert(`Falha ao calcular rota. Servidor respondeu com status ${routeResponse.status}. Detalhe: ${errorDataMessage}`);
+                currentRoutePolylineRef.current = null;
+                setIsCalculatingRoute(false);
+                return; 
+            }
+
             const routeData = await routeResponse.json();
 
             if (routeData.routes && routeData.routes.length > 0) {
-                const routeCoordinates = routeData.routes[0].geometry.coordinates.map(coord => [coord[1], coord[0]]);
+                const route = routeData.routes[0];
+                const routeCoordinates = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
                 const polyline = L.polyline(routeCoordinates, { color: 'blue', weight: 5 });
+                currentRoutePolylineRef.current = polyline;
 
-                const newRoutingControl = L.layerGroup([
-                    L.marker(startLatLng).bindPopup(isUsingCurrentLocationAsStart ? "Minha Localização Atual" : "Ponto de Partida"),
+                const newRouteDisplayLayer = L.layerGroup([
+                    L.marker(startLatLng).bindPopup(startPointDisplay),
                     L.marker(destLatLng).bindPopup(destinationHorta.nomeHorta),
                     polyline
                 ]).addTo(mapRef.current);
 
                 mapRef.current.fitBounds(polyline.getBounds());
-                setRoutingControl(newRoutingControl);
+                setRoutingControl(newRouteDisplayLayer);
+
+                if (route.legs && route.legs.length > 0 && route.legs[0].steps) {
+                    const newInstructions = route.legs[0].steps;
+                    setRouteInstructions(newInstructions);
+                    
+                    if (isFollowingUser && newInstructions.length > 0 && newInstructions[0]?.maneuver?.instruction) {
+                         const initialInstructionText = forcedStartLatLng ? "Rota recalculada. " : "Iniciando rota. ";
+                        speak(initialInstructionText + newInstructions[0].maneuver.instruction);
+                    } else if (isFollowingUser) {
+                        speak(forcedStartLatLng ? "Rota recalculada." : "Iniciando rota.");
+                    }
+                    setCurrentStepIndex(0);
+                }
+
             } else {
-                alert("Não foi possível calcular a rota. Verifique os pontos ou tente novamente.");
+                console.warn("OSRM response OK, but no routes found in data:", routeData);
+                alert("Não foi possível calcular a rota. Verifique os pontos ou tente novamente (nenhuma rota retornada).");
+                currentRoutePolylineRef.current = null;
             }
         } catch (error) {
+             console.error("Erro ao calcular rota (bloco catch):", error);
+             currentRoutePolylineRef.current = null;
             if (error.message && !error.message.startsWith("Erro de localização") && !error.message.startsWith("Localização com baixa precisão")) {
-                console.error("Erro ao calcular rota:", error);
                 alert("Ocorreu um erro ao tentar calcular a rota: " + error.message);
             }
         } finally {
             setIsCalculatingRoute(false);
         }
-    }, [mapRef, startPoint, destinationHorta, routingControl]);
+    }, [mapRef, startPoint, destinationHorta, cancelSpeech, isFollowingUser, speak]);
 
 
-    const handleClearRoute = () => {
-        if (routingControl && mapRef.current) {
-            if (mapRef.current.hasLayer(routingControl)) {
-                mapRef.current.removeControl(routingControl);
+    const checkOffRouteAndRecalculate = useCallback((userLatLng) => {
+        if (!isFollowingUser || !routeInstructions.length || !currentRoutePolylineRef.current || !mapRef.current || currentStepIndex >= routeInstructions.length) {
+            clearTimeout(offRouteRecalculateTimeoutRef.current); 
+            offRouteRecalculateTimeoutRef.current = null;
+            return;
+        }
+    
+        if (!userLatLng || typeof userLatLng.lat !== 'number' || typeof userLatLng.lng !== 'number' || isNaN(userLatLng.lat) || isNaN(userLatLng.lng)) {
+            console.warn("checkOffRouteAndRecalculate skipped: userLatLng inválido.", userLatLng);
+            return;
+        }
+        if (!destinationHorta) { 
+             console.warn("checkOffRouteAndRecalculate skipped: destinationHorta é nulo.");
+             clearTimeout(offRouteRecalculateTimeoutRef.current); 
+             offRouteRecalculateTimeoutRef.current = null;
+             return;
+        }
+    
+        let distanceToRoute = Infinity;
+        try {
+            if (L.GeometryUtil && typeof L.GeometryUtil.closest === 'function' && currentRoutePolylineRef.current.getLatLngs().length > 0) {
+                const closestPointOnRoute = L.GeometryUtil.closest(mapRef.current, currentRoutePolylineRef.current, userLatLng, false);
+                 if (closestPointOnRoute && closestPointOnRoute.latlng) { 
+                    distanceToRoute = userLatLng.distanceTo(closestPointOnRoute.latlng);
+                } else if (closestPointOnRoute instanceof L.LatLng) { 
+                     distanceToRoute = userLatLng.distanceTo(closestPointOnRoute);
+                }
+            } else {
+                 if (!L.GeometryUtil || typeof L.GeometryUtil.closest !== 'function') {
+                    console.warn("L.GeometryUtil.closest não está disponível. A detecção de fora da rota será menos precisa.");
+                }
+            }
+        } catch (e) {
+            console.error("Erro ao calcular distância para a rota:", e);
+        }
+    
+        if (distanceToRoute > OFF_ROUTE_THRESHOLD_METERS) {
+            if (!offRouteRecalculateTimeoutRef.current) {
+                speak("Você saiu da rota. Recalculando em alguns segundos.");
+    
+                offRouteRecalculateTimeoutRef.current = setTimeout(() => {
+                    if (Date.now() - lastRecalculationTimeRef.current > MIN_TIME_BETWEEN_RECALCS_MS) {
+                        if (destinationHorta && userLatLng) { 
+                            console.log("Recalculating route due to being off-route. User at:", userLatLng);
+                            handleCalculateRoute(userLatLng); 
+                            lastRecalculationTimeRef.current = Date.now();
+                        } else {
+                             console.warn("Recalculation skipped (timeout): destinationHorta or userLatLng missing.");
+                        }
+                    } else {
+                        console.log("Recálculo de rota ignorado (timeout), muito próximo do último.");
+                    }
+                    offRouteRecalculateTimeoutRef.current = null;
+                }, RECALCULATION_DEBOUNCE_MS);
+            }
+        } else {
+            if (offRouteRecalculateTimeoutRef.current) {
+                clearTimeout(offRouteRecalculateTimeoutRef.current);
+                offRouteRecalculateTimeoutRef.current = null;
             }
         }
+    }, [isFollowingUser, routeInstructions, currentStepIndex, speak, handleCalculateRoute, mapRef, destinationHorta]);
+
+
+    const handleLocationUpdateForRoute = useCallback((userLatLng) => {
+        if (isFollowingUser && routeInstructions.length > 0 && currentStepIndex >= 0) {
+            if (currentStepIndex >= routeInstructions.length) {
+                 setDistanceToNextManeuver(0);
+            } else {
+                const currentManeuver = routeInstructions[currentStepIndex].maneuver.location;
+                const maneuverLatLng = L.latLng(currentManeuver[1], currentManeuver[0]);
+                const distance = userLatLng.distanceTo(maneuverLatLng);
+                setDistanceToNextManeuver(distance);
+    
+                if (distance < ADVANCE_THRESHOLD_METERS) {
+                     setCurrentStepIndex(prevIndex => prevIndex + 1);
+                }
+            }
+        } else {
+            setDistanceToNextManeuver(null);
+        }
+        checkOffRouteAndRecalculate(userLatLng);
+    }, [isFollowingUser, routeInstructions, currentStepIndex, checkOffRouteAndRecalculate]);
+    
+
+    const handleClearRoute = () => {
+        cancelSpeech();
+        if (routingControl && mapRef.current && mapRef.current.hasLayer(routingControl)) { 
+            mapRef.current.removeLayer(routingControl);
+        }
         setRoutingControl(null);
-        setDestinationHorta(null);
+        currentRoutePolylineRef.current = null;
+        clearTimeout(offRouteRecalculateTimeoutRef.current);
+        offRouteRecalculateTimeoutRef.current = null;
+
+        setDestinationHorta(null); 
+        setRouteInstructions([]);
+        setCurrentStepIndex(-1);
+        setDistanceToNextManeuver(null);
     };
 
     const handleToggleFullScreen = useCallback(() => {
@@ -656,6 +967,9 @@ const MapComponent = ({ isEmbedded = false }) => {
                     onCalculateRoute={handleCalculateRoute}
                     onClearRoute={handleClearRoute}
                     isCalculatingRoute={isCalculatingRoute}
+                    routeInstructions={routeInstructions}
+                    currentStepIndex={currentStepIndex}
+                    distanceToNextManeuver={distanceToNextManeuver}
                 />
             </div>
 
@@ -663,7 +977,7 @@ const MapComponent = ({ isEmbedded = false }) => {
                 ref={mapRef}
                 center={initialPosition}
                 zoom={12}
-                scrollWheelZoom={true}
+                scrollWheelZoom={true} 
                 className="h-full w-full z-0"
                 zoomControl={false}
             >
@@ -671,12 +985,19 @@ const MapComponent = ({ isEmbedded = false }) => {
                     onToggleFullScreen={handleToggleFullScreen}
                     isFullScreen={isFullScreen}
                     onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+                    onLocationUpdate={handleLocationUpdateForRoute}
+                    isRouteActive={routeInstructions.length > 0 && currentStepIndex >=0 && currentStepIndex < routeInstructions.length}
+                    isFollowingUser={isFollowingUser}
+                    onToggleFollowMe={handleToggleFollowMeState}
                 />
                 <TileLayer
                     attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>'
                     url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
                 />
-                <MarkerClusterGroup key={filteredHortas.map(h => h.idHorta).join('-')}>
+                <MarkerClusterGroup 
+                    key={filteredHortas.map(h => h.idHorta).join('-') + `-${activeFilters.join('')}`}
+                    chunkedLoading 
+                >
                     {filteredHortas.map(horta => (
                         <Marker
                             key={horta.idHorta}
